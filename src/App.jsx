@@ -174,9 +174,9 @@ ${lastNote ? `Ultimo contacto: "${lastNote.text}" (${fmtDate(lastNote.date)})` :
 Tono: ${tone === "cordial" ? "Cordial y amable" : tone === "firme" ? "Firme y directo" : "Urgente"}
 Escribi en espanol rioplatense, tuteo. ${channel === "whatsapp" ? "Max 5 lineas." : channel === "email" ? "Con asunto en primera linea." : "Guion de llamada."} No uses asteriscos ni markdown.`;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] }),
       });
       const d = await res.json();
