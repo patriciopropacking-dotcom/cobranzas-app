@@ -475,13 +475,13 @@ function ClientDetail({ clientId, data, onBack, onSave }) {
   );
 }
 
-function ClientsView({ data, onSave, selectedClientId, setSelectedClientId }) {
+function ClientsView({ data, onSave, companyId, selectedClientId, setSelectedClientId }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [addModal, setAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ name:"",contact:"",phone:"",email:"",next_contact:"" });
   async function addClient() {
-    await supabase.from("clients").insert({ name:addForm.name||"Sin nombre", contact:addForm.contact||"", phone:addForm.phone||"", email:addForm.email||"", notes:[], next_contact:addForm.next_contact||null });
+    await supabase.from("clients").insert({ company_id: companyId, name:addForm.name||"Sin nombre", contact:addForm.contact||"", phone:addForm.phone||"", email:addForm.email||"", notes:[], next_contact:addForm.next_contact||null });
     onSave(); setAddModal(false); setAddForm({name:"",contact:"",phone:"",email:"",next_contact:""});
   }
   if (selectedClientId) return <ClientDetail clientId={selectedClientId} data={data} onBack={()=>setSelectedClientId(null)} onSave={onSave} />;
@@ -536,7 +536,7 @@ function ClientsView({ data, onSave, selectedClientId, setSelectedClientId }) {
   );
 }
 
-function InvoicesView({ data, onSave, onGoToClient }) {
+function InvoicesView({ data, onSave, companyId, onGoToClient }) {
   const [filter, setFilter] = useState("all");
   const [addModal, setAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ clientId:"",number:"",amount:"",due_date:"" });
@@ -549,7 +549,7 @@ function InvoicesView({ data, onSave, onGoToClient }) {
     onSave(); setHistoryModal(null);
   }
   async function addInvoice() {
-    await supabase.from("invoices").insert({ client_id:addForm.clientId||data.clients[0]?.id, number:addForm.number||"FC-????", amount:parseFloat(addForm.amount)||0, payments:[], due_date:addForm.due_date||"" });
+    await supabase.from("invoices").insert({ company_id: companyId, client_id:addForm.clientId||data.clients[0]?.id, number:addForm.number||"FC-????", amount:parseFloat(addForm.amount)||0, payments:[], due_date:addForm.due_date||"" });
     onSave(); setAddModal(false); setAddForm({clientId:"",number:"",amount:"",due_date:""});
   }
   async function deleteInvoice(invId) { await supabase.from("invoices").delete().eq("id", invId); onSave(); }
@@ -612,31 +612,111 @@ function InvoicesView({ data, onSave, onGoToClient }) {
   );
 }
 
+// ── COMPANY SELECTOR ──
+function CompanySelector({ companies, onSelect, onAdd, onDelete }) {
+  const [addModal, setAddModal] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  function handleAdd() {
+    if (!newName.trim()) return;
+    onAdd(newName.trim());
+    setNewName(""); setAddModal(false);
+  }
+
+  return (
+    <div style={{ minHeight:"100vh", background:bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'DM Mono','Courier New',monospace" }}>
+      <div style={{ marginBottom:40, textAlign:"center" }}>
+        <div style={{ fontSize:32, fontWeight:700, color:accent, letterSpacing:3 }}>⚡ COBRANZAS</div>
+        <div style={{ fontSize:13, color:"#555", marginTop:8, letterSpacing:2 }}>SELECCIONÁ UNA EMPRESA</div>
+      </div>
+      <div style={{ width:"100%", maxWidth:420, display:"flex", flexDirection:"column", gap:12 }}>
+        {companies.map(co => (
+          <div key={co.id} style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <button
+              style={{ flex:1, background:surface, border:`1px solid ${bc}`, borderRadius:12, padding:"20px 24px", cursor:"pointer", textAlign:"left", transition:"all 0.15s", color:"#e8e8f0", fontFamily:"'DM Mono','Courier New',monospace" }}
+              onMouseOver={e => e.currentTarget.style.borderColor = accent}
+              onMouseOut={e => e.currentTarget.style.borderColor = bc}
+              onClick={() => onSelect(co)}
+            >
+              <div style={{ fontSize:16, fontWeight:700 }}>{co.name}</div>
+            </button>
+            <button style={{ ...S.btn("danger"), padding:"8px 12px" }} onClick={() => { if (window.confirm(`¿Eliminar la empresa "${co.name}"? Se borrarán todos sus clientes y facturas.`)) onDelete(co.id); }}>×</button>
+          </div>
+        ))}
+        <button style={{ ...S.btn("primary"), padding:"16px", fontSize:13, borderRadius:12, marginTop:8 }} onClick={() => setAddModal(true)}>+ Nueva empresa</button>
+      </div>
+
+      {addModal && <Modal title="Nueva empresa" onClose={()=>setAddModal(false)} onConfirm={handleAdd}>
+        <Field label="Nombre de la empresa" value={newName} onChange={setNewName} />
+      </Modal>}
+    </div>
+  );
+}
+
 export default function App() {
+  const [companies, setCompanies] = useState([]);
+  const [currentCompany, setCurrentCompany] = useState(null);
   const [data, setData] = useState({ clients:[], invoices:[] });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("dashboard");
   const [selectedClientId, setSelectedClientId] = useState(null);
 
-  const loadData = useCallback(async () => {
-    const [{ data: clients }, { data: invoices }] = await Promise.all([
-      supabase.from("clients").select("*").order("name"),
-      supabase.from("invoices").select("*").order("due_date"),
-    ]);
-    setData({ clients: clients||[], invoices: invoices||[] });
-    setLoading(false);
+  // Load companies on mount
+  useEffect(() => {
+    (async () => {
+      const { data: cos } = await supabase.from("companies").select("*").order("name");
+      setCompanies(cos || []);
+      setLoading(false);
+    })();
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const loadData = useCallback(async (companyId) => {
+    const id = companyId || currentCompany?.id;
+    if (!id) return;
+    const [{ data: clients }, { data: invoices }] = await Promise.all([
+      supabase.from("clients").select("*").eq("company_id", id).order("name"),
+      supabase.from("invoices").select("*").eq("company_id", id).order("due_date"),
+    ]);
+    setData({ clients: clients||[], invoices: invoices||[] });
+  }, [currentCompany]);
+
+  async function selectCompany(co) {
+    setCurrentCompany(co);
+    setView("dashboard");
+    setSelectedClientId(null);
+    const [{ data: clients }, { data: invoices }] = await Promise.all([
+      supabase.from("clients").select("*").eq("company_id", co.id).order("name"),
+      supabase.from("invoices").select("*").eq("company_id", co.id).order("due_date"),
+    ]);
+    setData({ clients: clients||[], invoices: invoices||[] });
+  }
+
+  async function addCompany(name) {
+    const { data: co } = await supabase.from("companies").insert({ name }).select().single();
+    if (co) setCompanies(prev => [...prev, co].sort((a,b) => a.name.localeCompare(b.name)));
+  }
+
+  async function deleteCompany(id) {
+    await supabase.from("companies").delete().eq("id", id);
+    setCompanies(prev => prev.filter(c => c.id !== id));
+    if (currentCompany?.id === id) setCurrentCompany(null);
+  }
 
   function goToClient(client) { if (!client) return; setSelectedClientId(client.id); setView("clients"); }
 
-  if (loading) return <div style={{ minHeight:"100vh", background:bg, display:"flex", alignItems:"center", justifyContent:"center", color:"#666", fontFamily:"'DM Mono',monospace", fontSize:14 }}>Cargando datos...</div>;
+  if (loading) return <div style={{ minHeight:"100vh", background:bg, display:"flex", alignItems:"center", justifyContent:"center", color:"#666", fontFamily:"'DM Mono',monospace", fontSize:14 }}>Cargando...</div>;
+
+  if (!currentCompany) return <CompanySelector companies={companies} onSelect={selectCompany} onAdd={addCompany} onDelete={deleteCompany} />;
 
   return (
     <div style={{ minHeight:"100vh", background:bg, color:"#e8e8f0", fontFamily:"'DM Mono','Courier New',monospace" }}>
       <header style={{ borderBottom:`1px solid ${bc}`, padding:"16px 28px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#0f0f13ee", backdropFilter:"blur(8px)", position:"sticky", top:0, zIndex:50 }}>
-        <span style={{ fontSize:18, fontWeight:700, letterSpacing:2, color:accent, textTransform:"uppercase" }}>⚡ Cobranzas</span>
+        <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+          <span style={{ fontSize:18, fontWeight:700, letterSpacing:2, color:accent, textTransform:"uppercase" }}>⚡ Cobranzas</span>
+          <button style={{ ...S.btn(), fontSize:11, padding:"4px 10px" }} onClick={() => setCurrentCompany(null)}>
+            {currentCompany.name} ↩
+          </button>
+        </div>
         <nav style={{display:"flex",gap:4}}>
           {[["dashboard","Dashboard"],["clients","Clientes"],["invoices","Facturas"]].map(([v,l])=>(
             <button key={v} style={S.navBtn(view===v)} onClick={()=>{setView(v);if(v!=="clients")setSelectedClientId(null);}}>{l}</button>
@@ -645,8 +725,8 @@ export default function App() {
       </header>
       <main style={{ padding:"28px 28px", maxWidth:1100, margin:"0 auto" }}>
         {view==="dashboard"&&<Dashboard data={data} onGoToClient={goToClient} />}
-        {view==="clients"&&<ClientsView data={data} onSave={loadData} selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId} />}
-        {view==="invoices"&&<InvoicesView data={data} onSave={loadData} onGoToClient={goToClient} />}
+        {view==="clients"&&<ClientsView data={data} onSave={()=>loadData()} companyId={currentCompany.id} selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId} />}
+        {view==="invoices"&&<InvoicesView data={data} onSave={()=>loadData()} companyId={currentCompany.id} onGoToClient={goToClient} />}
       </main>
     </div>
   );
