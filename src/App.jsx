@@ -22,43 +22,104 @@ function getClientStatus(client, invoices) {
   return "ok";
 }
 
-const accent = "#e8ff47", bg = "#0f0f13", surface = "#1a1a22", bc = "#ffffff18";
+const navy  = "#1a2340";
+const navy2 = "#243060";
+const red   = "#d0282e";
+const bg    = "#f4f6f9";
+const white = "#ffffff";
+const bc    = "#e4e8ef";
+const muted = "#8a95a8";
+const sub   = "#4a5568";
+const successColor = "#16a34a";
+const warnColor    = "#d97706";
+const font  = "'DM Sans','Helvetica Neue',sans-serif";
+
 const S = {
-  card: { background: surface, border: `1px solid ${bc}`, borderRadius: 12, padding: 20, marginBottom: 16 },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { textAlign: "left", fontSize: 10, letterSpacing: 2, color: "#555", textTransform: "uppercase", padding: "8px 12px", borderBottom: `1px solid ${bc}` },
-  td: { padding: "12px 12px", borderBottom: `1px solid ${bc}18`, fontSize: 13, verticalAlign: "middle" },
-  sectionTitle: { fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#888", marginBottom: 16, marginTop: 0 },
-  input: { background: "#0f0f13", border: `1px solid ${bc}`, borderRadius: 8, padding: "10px 14px", color: "#e8e8f0", fontSize: 13, width: "100%", fontFamily: "'DM Mono','Courier New',monospace", boxSizing: "border-box" },
-  label: { fontSize: 11, color: "#666", letterSpacing: 1, textTransform: "uppercase", display: "block", marginBottom: 6 },
-  overlay: { position: "fixed", inset: 0, background: "#00000088", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" },
-  modalBox: { background: "#1a1a22", border: `1px solid ${bc}`, borderRadius: 16, padding: 32, width: 500, maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto" },
-  btn: (v = "default") => ({
-    background: v === "primary" ? accent : v === "danger" ? "#ff3b3b22" : v === "warning" ? "#f59e0b22" : "#ffffff10",
-    color: v === "primary" ? "#0f0f13" : v === "danger" ? "#ff3b3b" : v === "warning" ? "#f59e0b" : "#ccc",
-    border: v === "danger" ? "1px solid #ff3b3b44" : v === "warning" ? "1px solid #f59e0b44" : "none",
-    borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700,
-    fontFamily: "'DM Mono','Courier New',monospace", letterSpacing: 0.5, transition: "all 0.15s",
+  card: {
+    background: white, border: `1px solid ${bc}`,
+    borderRadius: 12, padding: 24, marginBottom: 20,
+  },
+  cardHeader: (color) => ({
+    background: color, borderRadius: "12px 12px 0 0",
+    padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between",
   }),
-  navBtn: (active, color) => ({
-    background: active ? (color || accent) : "transparent",
-    color: active ? (color ? "#fff" : "#0f0f13") : "#888",
-    border: `1px solid ${active ? (color || accent) : bc}`,
-    borderRadius: 6, padding: "6px 16px", cursor: "pointer", fontSize: 12, fontWeight: 700,
-    letterSpacing: 1, textTransform: "uppercase", transition: "all 0.15s", fontFamily: "'DM Mono','Courier New',monospace",
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: {
+    textAlign: "left", fontSize: 11, letterSpacing: 1.5, color: muted,
+    textTransform: "uppercase", padding: "0 0 12px",
+    borderBottom: `1px solid ${bc}`, fontWeight: 600,
+  },
+  td: {
+    padding: "14px 0", borderBottom: `1px solid ${bc}`,
+    fontSize: 13, verticalAlign: "middle", color: navy,
+  },
+  sectionTitle: {
+    fontSize: 11, fontWeight: 700, letterSpacing: 2,
+    textTransform: "uppercase", color: muted, marginBottom: 16, marginTop: 0,
+  },
+  input: {
+    background: bg, border: `1px solid ${bc}`, borderRadius: 8,
+    padding: "10px 14px", color: navy, fontSize: 13, width: "100%",
+    fontFamily: font, boxSizing: "border-box", outline: "none",
+  },
+  label: {
+    fontSize: 11, color: muted, letterSpacing: 1.5,
+    textTransform: "uppercase", display: "block", marginBottom: 8, fontWeight: 600,
+  },
+  overlay: {
+    position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+    backdropFilter: "blur(6px)", zIndex: 100,
+    display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  modalBox: {
+    background: white, border: `1px solid ${bc}`,
+    borderRadius: 16, padding: 32, width: 520,
+    maxWidth: "92vw", maxHeight: "90vh", overflowY: "auto",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+  },
+  btn: (v = "default") => ({
+    background:
+      v === "primary" ? navy :
+      v === "danger"  ? "#fef2f2" :
+      v === "warning" ? "#fffbeb" :
+      v === "red"     ? red :
+      "transparent",
+    color:
+      v === "primary" ? white :
+      v === "danger"  ? red :
+      v === "warning" ? warnColor :
+      v === "red"     ? white :
+      sub,
+    border:
+      v === "danger"  ? `1px solid #fecaca` :
+      v === "warning" ? `1px solid #fde68a` :
+      v === "primary" || v === "red" ? "none" :
+      `1px solid ${bc}`,
+    borderRadius: 8, padding: "8px 18px", cursor: "pointer",
+    fontSize: 13, fontWeight: 600, fontFamily: font,
+    transition: "all 0.15s",
+  }),
+  navItem: (active) => ({
+    display: "flex", alignItems: "center", gap: 12,
+    padding: "10px 14px", borderRadius: 8, cursor: "pointer",
+    background: active ? red : "transparent",
+    color: active ? white : "rgba(255,255,255,0.5)",
+    fontSize: 13, fontWeight: active ? 600 : 500,
+    transition: "all 0.15s", marginBottom: 2,
   }),
 };
 
 function Badge({ type, children }) {
   const map = {
-    overdue: { background: "#ff3b3b22", color: "#ff3b3b", border: "1px solid #ff3b3b55" },
-    pending: { background: "#f59e0b22", color: "#d97706", border: "1px solid #f59e0b55" },
-    paid:    { background: "#10b98122", color: "#10b981", border: "1px solid #10b98155" },
-    today:   { background: "#6366f122", color: "#6366f1", border: "1px solid #6366f155" },
-    alert:   { background: "#f59e0b22", color: "#f59e0b", border: "1px solid #f59e0b55" },
-    partial: { background: "#a78bfa22", color: "#a78bfa", border: "1px solid #a78bfa55" },
+    overdue: { background: "#fef2f2", color: red,          border: "1px solid #fecaca" },
+    pending: { background: "#fffbeb", color: warnColor,    border: "1px solid #fde68a" },
+    paid:    { background: "#f0fdf4", color: successColor, border: "1px solid #bbf7d0" },
+    today:   { background: "#f5f3ff", color: "#7c3aed",    border: "1px solid #ddd6fe" },
+    alert:   { background: "#fffbeb", color: warnColor,    border: "1px solid #fde68a" },
+    partial: { background: "#f5f3ff", color: "#7c3aed",    border: "1px solid #ddd6fe" },
   };
-  return <span style={{ ...map[type], padding: "2px 10px", borderRadius: 99, fontSize: 12, fontWeight: 700, fontFamily: "inherit", whiteSpace: "nowrap" }}>{children}</span>;
+  const style = map[type] || map.pending;
+  return <span style={{ ...style, padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, letterSpacing: 0.3, whiteSpace: "nowrap" }}>{children}</span>;
 }
 
 function Modal({ title, onClose, onConfirm, confirmLabel, children }) {
@@ -66,8 +127,8 @@ function Modal({ title, onClose, onConfirm, confirmLabel, children }) {
     <div style={S.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={S.modalBox}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: accent }}>{title}</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#666", cursor: "pointer", fontSize: 20 }}>×</button>
+          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: red }}>{title}</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: sub, cursor: "pointer", fontSize: 20 }}>×</button>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{children}</div>
         {onConfirm && <div style={{ display: "flex", gap: 8, marginTop: 24, justifyContent: "flex-end" }}>
@@ -95,18 +156,18 @@ function PaymentHistoryModal({ inv, onDeletePayment, onClose }) {
   const payments = inv.payments || [];
   return (
     <Modal title={`Pagos — ${inv.number}`} onClose={onClose}>
-      <div style={{ background: "#0f0f13", borderRadius: 8, padding: 14, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
+      <div style={{ background: bg, borderRadius: 8, padding: 14, fontSize: 13, display: "flex", justifyContent: "space-between" }}>
         <div>Factura: <strong>{fmt(inv.amount)}</strong></div>
-        <div>Cobrado: <strong style={{ color: "#10b981" }}>{fmt(totalPaid)}</strong></div>
-        <div>Saldo: <strong style={{ color: balance > 0 ? "#ff3b3b" : "#10b981" }}>{fmt(balance)}</strong></div>
+        <div>Cobrado: <strong style={{ color: successColor }}>{fmt(totalPaid)}</strong></div>
+        <div>Saldo: <strong style={{ color: balance > 0 ? red : successColor }}>{fmt(balance)}</strong></div>
       </div>
       {payments.length === 0
-        ? <div style={{ color: "#555", fontSize: 13, textAlign: "center", padding: "20px 0" }}>Sin pagos registrados.</div>
+        ? <div style={{ color: muted, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Sin pagos registrados.</div>
         : payments.map(p => (
           <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${bc}` }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#10b981" }}>{fmt(p.amount)}</div>
-              <div style={{ fontSize: 11, color: "#555" }}>{fmtDate(p.date)}{p.note ? ` · ${p.note}` : ""}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: successColor }}>{fmt(p.amount)}</div>
+              <div style={{ fontSize: 11, color: muted }}>{fmtDate(p.date)}{p.note ? ` · ${p.note}` : ""}</div>
             </div>
             <button style={{ ...S.btn("danger"), fontSize: 11 }}
               onClick={() => { if (window.confirm(`¿Eliminar pago de ${fmt(p.amount)}?`)) onDeletePayment(inv.id, p.id); }}>
@@ -129,15 +190,15 @@ function InvoiceRow({ inv, onMarkPaid, onPartialPay, onDelete, onViewPayments })
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 13 }}>{inv.number}</div>
-          <div style={{ fontSize: 11, color: "#555" }}>
+          <div style={{ fontSize: 11, color: muted }}>
             Vence: {fmtDate(inv.due_date)}{d < 0 && st !== "paid" ? ` · ${Math.abs(d)}d vencida` : ""}
-            {totalPaid > 0 && <span style={{ color: "#a78bfa" }}> · Cobrado: {fmt(totalPaid)}</span>}
+            {totalPaid > 0 && <span style={{ color: "#7c3aed" }}> · Cobrado: {fmt(totalPaid)}</span>}
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontWeight: 700, fontSize: 13 }}>{fmt(balance)}</div>
-            {totalPaid > 0 && <div style={{ fontSize: 10, color: "#555" }}>de {fmt(inv.amount)}</div>}
+            {totalPaid > 0 && <div style={{ fontSize: 10, color: muted }}>de {fmt(inv.amount)}</div>}
           </div>
           {st === "paid" ? <Badge type="paid">Cobrada</Badge> : totalPaid > 0 ? <Badge type="partial">Parcial</Badge> : st === "overdue" ? <Badge type="overdue">Vencida</Badge> : <Badge type="pending">Pendiente</Badge>}
           {st !== "paid" && <><button style={S.btn()} onClick={() => onPartialPay(inv)}>$ Pago</button><button style={S.btn()} onClick={() => onMarkPaid(inv.id)}>✓</button></>}
@@ -197,11 +258,11 @@ Tono: ${tone === "cordial" ? "Cordial y amable" : tone === "firme" ? "Firme y di
     setLoading(false);
   }
   function copy() { navigator.clipboard.writeText(message); setCopied(true); setTimeout(() => setCopied(false), 2000); }
-  const toneColors = { cordial: null, firme: "#f59e0b", urgente: "#ff3b3b" };
+  const toneColors = { cordial: null, firme: warnColor, urgente: red };
   return (
-    <div style={{ ...S.card, borderColor: `${accent}44` }}>
-      <p style={{ ...S.sectionTitle, color: accent }}>🤖 Asistente IA — Generar mensaje</p>
-      {clInvs.length === 0 ? <div style={{ color: "#555", fontSize: 13 }}>Sin facturas pendientes.</div> : (
+    <div style={{ ...S.card, borderColor: `${bc}` }}>
+      <p style={{ ...S.sectionTitle, color: red }}>🤖 Asistente IA — Generar mensaje</p>
+      {clInvs.length === 0 ? <div style={{ color: muted, fontSize: 13 }}>Sin facturas pendientes.</div> : (
         <>
           <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
             <div><label style={S.label}>Canal</label><div style={{ display: "flex", gap: 6 }}>
@@ -220,7 +281,7 @@ Tono: ${tone === "cordial" ? "Cordial y amable" : tone === "firme" ? "Firme y di
           </button>
           {message && !loading && (
             <div style={{ marginTop:14 }}>
-              <div style={{ background:"#0f0f13", border:`1px solid ${bc}`, borderRadius:8, padding:16, fontSize:13, lineHeight:1.75, whiteSpace:"pre-wrap" }}>{message}</div>
+              <div style={{ background:"#f8f9fb", border:`1px solid ${bc}`, borderRadius:8, padding:16, fontSize:13, lineHeight:1.75, whiteSpace:"pre-wrap" }}>{message}</div>
               <button style={{ ...S.btn(copied?"primary":"default"), marginTop:10, width:"100%" }} onClick={copy}>{copied ? "✓ ¡Copiado!" : "📋 Copiar mensaje"}</button>
             </div>
           )}
@@ -288,74 +349,130 @@ ${alertClients ? `\nVencen pronto:\n${alertClients}` : ""}`;
     setAiLoading(false);
   }
 
-  const Stat = ({color,label,value,sub}) => (
-    <div style={{ background:surface, border:`1px solid ${color}44`, borderRadius:12, padding:20 }}>
-      <div style={{ fontSize:11, color:"#666", letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>{label}</div>
-      <div style={{ fontSize:26, fontWeight:700, color, marginBottom:4, letterSpacing:-1 }}>{value}</div>
-      <div style={{ fontSize:11, color:"#555" }}>{sub}</div>
+  const Stat = ({bgColor, label, value, sub}) => (
+    <div style={{ borderRadius:14, padding:"24px 26px", background:bgColor, color:white, position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute", bottom:-18, right:-18, width:80, height:80, borderRadius:"50%", background:"rgba(255,255,255,.1)" }} />
+      <div style={{ fontSize:11, fontWeight:600, textTransform:"uppercase", letterSpacing:1.5, marginBottom:12, opacity:.75 }}>{label}</div>
+      <div style={{ fontSize:28, fontWeight:800, letterSpacing:-1, marginBottom:6, lineHeight:1 }}>{value}</div>
+      <div style={{ fontSize:12, opacity:.65, fontWeight:500 }}>{sub}</div>
     </div>
   );
+
   return (
     <div>
+      {/* KPI Cards */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16, marginBottom:28 }}>
-        <Stat color="#ff3b3b" label="Vencidas" value={fmt(totalOverdue)} sub={`${overdueInvs.length} factura${overdueInvs.length!==1?"s":""}`} />
-        <Stat color="#d97706" label="Por vencer" value={fmt(totalPending)} sub={`${pendingInvs.length} factura${pendingInvs.length!==1?"s":""}`} />
-        <Stat color="#6366f1" label="Contactar hoy" value={toContact.length} sub={`cliente${toContact.length!==1?"s":""} pendiente${toContact.length!==1?"s":""}`} />
-        <Stat color="#10b981" label="Total en cartera" value={fmt(totalOverdue+totalPending)} sub="por cobrar" />
+        <Stat bgColor={red}     label="Vencido"        value={fmt(totalOverdue)}            sub={`${overdueInvs.length} factura${overdueInvs.length!==1?"s":""}`} />
+        <Stat bgColor="#b45309" label="Por vencer"     value={fmt(totalPending)}            sub={`${pendingInvs.length} factura${pendingInvs.length!==1?"s":""}`} />
+        <Stat bgColor="#5b21b6" label="Contactar hoy"  value={toContact.length}             sub={`cliente${toContact.length!==1?"s":""} pendiente${toContact.length!==1?"s":""}`} />
+        <Stat bgColor={navy}    label="Total en cartera" value={fmt(totalOverdue+totalPending)} sub="por cobrar" />
       </div>
 
-      {/* AI Daily Summary */}
-      <div style={{ ...S.card, borderColor:`${accent}44`, marginBottom:24 }}>
+      {/* AI Summary */}
+      <div style={{ background:navy, borderRadius:12, padding:24, marginBottom:20 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: aiSummary||aiLoading ? 12 : 0 }}>
-          <p style={{ ...S.sectionTitle, margin:0, color:accent }}>🤖 Resumen del día — {companyName}</p>
-          <button style={{ ...S.btn(), fontSize:11 }} onClick={generateSummary} disabled={aiLoading}>↻ Actualizar</button>
+          <p style={{ margin:0, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", color:"rgba(255,255,255,.5)" }}>🤖 Resumen del día — {companyName}</p>
+          <button style={{ background:"rgba(255,255,255,.1)", border:"1px solid rgba(255,255,255,.15)", borderRadius:6, padding:"5px 12px", color:"rgba(255,255,255,.6)", fontSize:11, cursor:"pointer", fontFamily:font }} onClick={generateSummary} disabled={aiLoading}>↻ Actualizar</button>
         </div>
-        {aiLoading && <div style={{ color:"#555", fontSize:13 }}>Analizando tu cartera...</div>}
-        {aiSummary && !aiLoading && <div style={{ fontSize:13, lineHeight:1.8, color:"#ccc", whiteSpace:"pre-wrap" }}>{aiSummary}</div>}
-        {!aiSummary && !aiLoading && data.clients.length === 0 && <div style={{ color:"#555", fontSize:13 }}>Cargá clientes y facturas para ver el resumen.</div>}
+        {aiLoading && <div style={{ color:"rgba(255,255,255,.5)", fontSize:13 }}>Analizando tu cartera...</div>}
+        {aiSummary && !aiLoading && <div style={{ fontSize:13, lineHeight:1.8, color:"rgba(255,255,255,.75)", whiteSpace:"pre-wrap" }}>{aiSummary}</div>}
+        {!aiSummary && !aiLoading && data.clients.length === 0 && <div style={{ color:"rgba(255,255,255,.4)", fontSize:13 }}>Cargá clientes y facturas para ver el resumen.</div>}
       </div>
-      {alertInvs.length > 0 && (
-        <div style={{ ...S.card, borderColor:"#f59e0b44", marginBottom:24 }}>
-          <p style={{ ...S.sectionTitle, color:"#f59e0b" }}>⚠️ Vencen pronto (próximos {ALERT_DAYS} días)</p>
-          {alertInvs.map(inv => { const cl = getClient(inv.client_id); return (
-            <div key={inv.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderBottom:`1px solid ${bc}` }}>
-              <div><div style={{ fontWeight:700, fontSize:14 }}>{cl?.name} <span style={{ fontWeight:400, color:"#888" }}>— {inv.number}</span></div><div style={{ fontSize:12, color:"#555" }}>Vence el {fmtDate(inv.due_date)}</div></div>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}><Badge type="alert">en {daysDiff(inv.due_date)}d</Badge><strong>{fmt(getInvoiceBalance(inv))}</strong><button style={S.btn("primary")} onClick={() => onGoToClient(cl)}>Ver</button></div>
+
+      {/* Vencen pronto + Contactar hoy */}
+      {(alertInvs.length > 0 || toContact.length > 0) && (
+        <div style={{ display:"grid", gridTemplateColumns: alertInvs.length>0 && toContact.length>0 ? "1fr 1fr" : "1fr", gap:20, marginBottom:20 }}>
+          {alertInvs.length > 0 && (
+            <div style={{ background:white, border:`1px solid ${bc}`, borderRadius:12, overflow:"hidden" }}>
+              <div style={{ background:"#b45309", padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"rgba(255,255,255,.7)" }}>⚠ Vencen pronto</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:white, marginTop:4 }}>Próximos {ALERT_DAYS} días</div>
+                </div>
+                <div style={{ fontSize:28, fontWeight:800, color:white }}>{alertInvs.length}</div>
+              </div>
+              <div style={{ padding:"0 24px" }}>
+                {alertInvs.map(inv => { const cl = getClient(inv.client_id); return (
+                  <div key={inv.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 0", borderBottom:`1px solid ${bc}` }}>
+                    <div>
+                      <div style={{ fontWeight:600, fontSize:13 }}>{cl?.name} <span style={{ fontWeight:400, color:muted }}>— {inv.number}</span></div>
+                      <div style={{ fontSize:12, color:muted, marginTop:2 }}>Vence el {fmtDate(inv.due_date)}</div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <Badge type="alert">en {daysDiff(inv.due_date)}d</Badge>
+                      <strong style={{ fontSize:13 }}>{fmt(getInvoiceBalance(inv))}</strong>
+                      <button style={S.btn("primary")} onClick={() => onGoToClient(cl)}>Ver</button>
+                    </div>
+                  </div>
+                ); })}
+              </div>
             </div>
-          ); })}
+          )}
+          {toContact.length > 0 && (
+            <div style={{ background:white, border:`1px solid ${bc}`, borderRadius:12, overflow:"hidden" }}>
+              <div style={{ background:"#5b21b6", padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"rgba(255,255,255,.7)" }}>📞 Contactar hoy</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:white, marginTop:4 }}>Clientes pendientes</div>
+                </div>
+                <div style={{ fontSize:28, fontWeight:800, color:white }}>{toContact.length}</div>
+              </div>
+              <div style={{ padding:"0 24px" }}>
+                {toContact.map(c => { const n = data.invoices.filter(i => i.client_id===c.id && getInvoiceStatus(i)!=="paid").length; return (
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 0", borderBottom:`1px solid ${bc}` }}>
+                    <div>
+                      <div style={{ fontWeight:600, fontSize:13 }}>{c.name}</div>
+                      <div style={{ fontSize:12, color:muted, marginTop:2 }}>{c.contact}{c.phone ? ` · ${c.phone}` : ""}</div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:12, color:muted }}>{n} fc.</span>
+                      <button style={S.btn("primary")} onClick={() => onGoToClient(c)}>Ver</button>
+                    </div>
+                  </div>
+                ); })}
+              </div>
+            </div>
+          )}
         </div>
       )}
-      {toContact.length > 0 && (
-        <div style={{ ...S.card, borderColor:"#6366f144", marginBottom:24 }}>
-          <p style={{ ...S.sectionTitle, color:"#6366f1" }}>⚡ Contactar hoy</p>
-          {toContact.map(c => { const n = data.invoices.filter(i => i.client_id===c.id && getInvoiceStatus(i)!=="paid").length; return (
-            <div key={c.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderBottom:`1px solid ${bc}` }}>
-              <div><div style={{ fontWeight:700, fontSize:14 }}>{c.name}</div><div style={{ fontSize:12, color:"#666" }}>{c.contact} · {c.phone}</div></div>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}><span style={{ fontSize:12, color:"#888" }}>{n} fc. pendiente{n!==1?"s":""}</span><button style={S.btn("primary")} onClick={() => onGoToClient(c)}>Ver</button></div>
-            </div>
-          ); })}
+
+      {/* Facturas vencidas */}
+      <div style={{ background:white, border:`1px solid ${bc}`, borderRadius:12, overflow:"hidden" }}>
+        <div style={{ background:navy, padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"rgba(255,255,255,.6)" }}>Facturas vencidas</div>
+            <div style={{ fontSize:13, fontWeight:700, color:white, marginTop:4 }}>Ordenadas por antigüedad</div>
+          </div>
+          <div style={{ textAlign:"right" }}>
+            <div style={{ fontSize:28, fontWeight:800, color:"#ff8080" }}>{overdueInvs.length}</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,.4)" }}>facturas</div>
+          </div>
         </div>
-      )}
-      <div style={S.card}>
-        <p style={S.sectionTitle}>Facturas vencidas</p>
-        {overdueInvs.length === 0 ? <div style={{ color:"#555", fontSize:13 }}>Sin facturas vencidas 🎉</div> : (
-          <table style={S.table}>
-            <thead><tr>
-              <th style={S.th}>Cliente</th><th style={S.th}>N° Factura</th>
-              <th style={{ ...S.th, cursor:"pointer", userSelect:"none", color:"#aaa" }} onClick={() => setSortAsc(s=>!s)}>Vencimiento {sortAsc?"↑":"↓"}</th>
-              <th style={S.th}>Días</th><th style={S.th}>Saldo</th>
-            </tr></thead>
-            <tbody>{sortedOverdue.map(inv => { const cl = getClient(inv.client_id); const paid = getTotalPaid(inv); return (
-              <tr key={inv.id}>
-                <td style={S.td}><span style={{ cursor:"pointer", color:accent }} onClick={() => onGoToClient(cl)}>{cl?.name}</span></td>
-                <td style={S.td}><span style={{ color:"#888" }}>{inv.number}</span>{paid>0&&<> <Badge type="partial">Parcial</Badge></>}</td>
-                <td style={S.td}>{fmtDate(inv.due_date)}</td>
-                <td style={S.td}><Badge type="overdue">{Math.abs(daysDiff(inv.due_date))}d vencida</Badge></td>
-                <td style={S.td}><strong>{fmt(getInvoiceBalance(inv))}</strong>{paid>0&&<div style={{ fontSize:10, color:"#555" }}>de {fmt(inv.amount)}</div>}</td>
-              </tr>
-            ); })}</tbody>
-          </table>
-        )}
+        <div style={{ padding:"0 24px" }}>
+          {overdueInvs.length === 0
+            ? <div style={{ padding:"20px 0", color:muted, fontSize:13 }}>Sin facturas vencidas 🎉</div>
+            : (
+              <table style={S.table}>
+                <thead><tr>
+                  <th style={S.th}>Cliente</th>
+                  <th style={S.th}>N° Factura</th>
+                  <th style={{ ...S.th, cursor:"pointer", userSelect:"none" }} onClick={() => setSortAsc(s=>!s)}>Vencimiento {sortAsc?"↑":"↓"}</th>
+                  <th style={S.th}>Días</th>
+                  <th style={S.th}>Saldo</th>
+                </tr></thead>
+                <tbody>{sortedOverdue.map(inv => { const cl = getClient(inv.client_id); const paid = getTotalPaid(inv); return (
+                  <tr key={inv.id}>
+                    <td style={S.td}><span style={{ cursor:"pointer", fontWeight:600, color:navy }} onClick={() => onGoToClient(cl)}>{cl?.name}</span></td>
+                    <td style={{ ...S.td, color:muted }}>{inv.number}{paid>0&&<> <Badge type="partial">Parcial</Badge></>}</td>
+                    <td style={S.td}>{fmtDate(inv.due_date)}</td>
+                    <td style={S.td}><Badge type="overdue">{Math.abs(daysDiff(inv.due_date))}d</Badge></td>
+                    <td style={S.td}><strong>{fmt(getInvoiceBalance(inv))}</strong>{paid>0&&<div style={{ fontSize:11, color:muted }}>de {fmt(inv.amount)}</div>}</td>
+                  </tr>
+                ); })}</tbody>
+              </table>
+            )
+          }
+        </div>
       </div>
     </div>
   );
@@ -380,7 +497,7 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
   const [historyModal, setHistoryModal] = useState(null);
   const [payProfileModal, setPayProfileModal] = useState(false);
   const [payProfileForm, setPayProfileForm] = useState({ method: cl?.payment_profile?.method||"", term: cl?.payment_profile?.term||"", notes: cl?.payment_profile?.notes||"" });
-  if (!cl) return <div style={{ color:"#555" }}>Cliente no encontrado.</div>;
+  if (!cl) return <div style={{ color:muted }}>Cliente no encontrado.</div>;
 
   async function savePayProfile() {
     await supabase.from("clients").update({ payment_profile: payProfileForm }).eq("id", clientId);
@@ -450,7 +567,7 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
           <div style={S.card}>
             {editing ? (
               <>
-                <p style={{ ...S.sectionTitle, color:accent }}>Editar datos</p>
+                <p style={{ ...S.sectionTitle, color:red }}>Editar datos</p>
                 <Field label="Empresa / Nombre" value={editForm.name} onChange={v=>setEditForm(f=>({...f,name:v}))} /><div style={{height:10}}/>
                 <Field label="Contacto" value={editForm.contact} onChange={v=>setEditForm(f=>({...f,contact:v}))} /><div style={{height:10}}/>
                 <Field label="Teléfono" value={editForm.phone} onChange={v=>setEditForm(f=>({...f,phone:v}))} /><div style={{height:10}}/>
@@ -464,13 +581,13 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
             ) : (
               <>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
-                  <div><div style={{ fontSize:20, fontWeight:700, color:accent }}>{cl.name}</div><div style={{ fontSize:13, color:"#888", marginTop:4 }}>{cl.contact}</div></div>
-                  <div style={{ textAlign:"right" }}><div style={{ fontSize:11, color:"#555", letterSpacing:1 }}>DEUDA TOTAL</div><div style={{ fontSize:22, fontWeight:700, color:totalDebt>0?"#ff3b3b":"#10b981" }}>{fmt(totalDebt)}</div></div>
+                  <div><div style={{ fontSize:20, fontWeight:700, color:red }}>{cl.name}</div><div style={{ fontSize:13, color:muted, marginTop:4 }}>{cl.contact}</div></div>
+                  <div style={{ textAlign:"right" }}><div style={{ fontSize:11, color:muted, letterSpacing:1 }}>DEUDA TOTAL</div><div style={{ fontSize:22, fontWeight:700, color:totalDebt>0?red:successColor }}>{fmt(totalDebt)}</div></div>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8, fontSize:13 }}>
-                  {cl.phone&&<div>📞 <span style={{color:"#888"}}>{cl.phone}</span></div>}
-                  {cl.email&&<div>✉️ <span style={{color:"#888"}}>{cl.email}</span></div>}
-                  {cl.next_contact&&<div style={{marginTop:4}}>🗓️ Próximo contacto: <strong style={{color:dd!==null&&dd<=0?"#6366f1":"#e8e8f0"}}>{fmtDate(cl.next_contact)}</strong>{dd!==null&&dd<=0&&<> <Badge type="today">HOY</Badge></>}</div>}
+                  {cl.phone&&<div>📞 <span style={{color:muted}}>{cl.phone}</span></div>}
+                  {cl.email&&<div>✉️ <span style={{color:muted}}>{cl.email}</span></div>}
+                  {cl.next_contact&&<div style={{marginTop:4}}>🗓️ Próximo contacto: <strong style={{color:dd!==null&&dd<=0?"#5b21b6":"#e8e8f0"}}>{fmtDate(cl.next_contact)}</strong>{dd!==null&&dd<=0&&<> <Badge type="today">HOY</Badge></>}</div>}
                 </div>
                 <div style={{ display:"flex", gap:8, marginTop:16 }}>
                   <button style={S.btn()} onClick={()=>setEditing(true)}>✏️ Editar datos</button>
@@ -481,10 +598,10 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
           </div>
           <div style={S.card}>
             <p style={S.sectionTitle}>Historial de contactos</p>
-            {(!cl.notes||cl.notes.length===0) ? <div style={{color:"#555",fontSize:13}}>Sin notas aún.</div>
+            {(!cl.notes||cl.notes.length===0) ? <div style={{color:muted,fontSize:13}}>Sin notas aún.</div>
               : cl.notes.map((n,i)=>(
-                <div key={i} style={{ borderLeft:`2px solid ${accent}44`, paddingLeft:12, marginBottom:12 }}>
-                  <div style={{fontSize:11,color:"#555",marginBottom:2}}>{fmtDate(n.date)}</div>
+                <div key={i} style={{ borderLeft:"2px solid #e4e8ef", paddingLeft:12, marginBottom:12 }}>
+                  <div style={{fontSize:11,color:muted,marginBottom:2}}>{fmtDate(n.date)}</div>
                   <div style={{fontSize:13}}>{n.text}</div>
                 </div>
               ))}
@@ -495,12 +612,12 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
               <button style={{ ...S.btn(), fontSize:11 }} onClick={()=>{setPayProfileForm({ method:cl.payment_profile?.method||"", term:cl.payment_profile?.term||"", notes:cl.payment_profile?.notes||"" });setPayProfileModal(true);}}>✏️ Editar</button>
             </div>
             {!cl.payment_profile || (!cl.payment_profile.method && !cl.payment_profile.notes) ? (
-              <div style={{color:"#555",fontSize:13}}>Sin información cargada aún.</div>
+              <div style={{color:muted,fontSize:13}}>Sin información cargada aún.</div>
             ) : (
               <div style={{ display:"flex", flexDirection:"column", gap:6, fontSize:13 }}>
-                {cl.payment_profile.method && <div>💳 <span style={{color:"#888"}}>Medio:</span> <strong>{cl.payment_profile.method}</strong></div>}
-                {cl.payment_profile.term && <div>📅 <span style={{color:"#888"}}>Plazo habitual:</span> <strong>{cl.payment_profile.term}</strong></div>}
-                {cl.payment_profile.notes && <div style={{ marginTop:4, background:"#0f0f13", borderRadius:8, padding:"10px 12px", color:"#ccc", lineHeight:1.6 }}>{cl.payment_profile.notes}</div>}
+                {cl.payment_profile.method && <div>💳 <span style={{color:muted}}>Medio:</span> <strong>{cl.payment_profile.method}</strong></div>}
+                {cl.payment_profile.term && <div>📅 <span style={{color:muted}}>Plazo habitual:</span> <strong>{cl.payment_profile.term}</strong></div>}
+                {cl.payment_profile.notes && <div style={{ marginTop:4, background:"#f8f9fb", borderRadius:8, padding:"10px 12px", color:sub, lineHeight:1.6 }}>{cl.payment_profile.notes}</div>}
               </div>
             )}
           </div>
@@ -514,7 +631,7 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
               <button style={S.btn("primary")} onClick={()=>{setInvForm({number:"",amount:"",due_date:""});setInvModal(true);}}>+ Nueva</button>
             </div>
           </div>
-          {clInvoices.length===0 ? <div style={{color:"#555",fontSize:13}}>Sin facturas.</div>
+          {clInvoices.length===0 ? <div style={{color:muted,fontSize:13}}>Sin facturas.</div>
             : clInvoices.map(inv=>(
               <InvoiceRow key={inv.id} inv={inv} onMarkPaid={markPaid} onPartialPay={inv=>{setPayModal(inv);setPayForm({amount:"",note:""}); }} onDelete={deleteInvoice} onViewPayments={inv=>setHistoryModal(inv)} />
             ))}
@@ -522,10 +639,10 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
       </div>
 
       {payModal && <Modal title={`Registrar pago — ${payModal.number}`} onClose={()=>setPayModal(null)} onConfirm={applyPayment} confirmLabel="Registrar pago">
-        <div style={{ background:"#0f0f13", borderRadius:8, padding:14, fontSize:13 }}>
+        <div style={{ background:"#f8f9fb", borderRadius:8, padding:14, fontSize:13 }}>
           <div>Factura: <strong>{fmt(payModal.amount)}</strong></div>
-          {getTotalPaid(payModal)>0&&<div>Ya cobrado: <strong style={{color:"#a78bfa"}}>{fmt(getTotalPaid(payModal))}</strong></div>}
-          <div>Saldo: <strong style={{color:"#ff3b3b"}}>{fmt(getInvoiceBalance(payModal))}</strong></div>
+          {getTotalPaid(payModal)>0&&<div>Ya cobrado: <strong style={{color:"#7c3aed"}}>{fmt(getTotalPaid(payModal))}</strong></div>}
+          <div>Saldo: <strong style={{color:red}}>{fmt(getInvoiceBalance(payModal))}</strong></div>
         </div>
         <Field label="Monto del pago ($)" type="number" value={payForm.amount} onChange={v=>setPayForm(f=>({...f,amount:v}))} />
         <Field label="Nota (opcional)" value={payForm.note} onChange={v=>setPayForm(f=>({...f,note:v}))} />
@@ -537,21 +654,21 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
         <Field label="Monto total recibido ($)" type="number" value={distributeAmount} onChange={handleDistributeChange} />
         {distribution && (
           <div>
-            <div style={{ fontSize:11, color:"#666", letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>Distribución automática (más vencidas primero)</div>
+            <div style={{ fontSize:11, color:sub, letterSpacing:1, textTransform:"uppercase", marginBottom:10 }}>Distribución automática (más vencidas primero)</div>
             {distribution.map(({ inv, balance, applied, leftover }) => (
-              <div key={inv.id} style={{ background:"#0f0f13", borderRadius:8, padding:12, marginBottom:8, borderLeft:`3px solid ${applied>=balance?"#10b981":applied>0?"#a78bfa":"#ffffff18"}` }}>
+              <div key={inv.id} style={{ background:"#f8f9fb", borderRadius:8, padding:12, marginBottom:8, borderLeft:`3px solid ${applied>=balance?successColor:applied>0?"#7c3aed":"#ffffff18"}` }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <div><div style={{ fontWeight:700, fontSize:13 }}>{inv.number}</div><div style={{ fontSize:11, color:"#555" }}>Vence {fmtDate(inv.due_date)} · Saldo: {fmt(balance)}</div></div>
+                  <div><div style={{ fontWeight:700, fontSize:13 }}>{inv.number}</div><div style={{ fontSize:11, color:muted }}>Vence {fmtDate(inv.due_date)} · Saldo: {fmt(balance)}</div></div>
                   <div style={{ textAlign:"right" }}>
-                    {applied>0 ? <><div style={{ fontWeight:700, fontSize:13, color:applied>=balance?"#10b981":"#a78bfa" }}>{applied>=balance?"✓ Saldada":`Aplica ${fmt(applied)}`}</div>{leftover>0&&<div style={{fontSize:11,color:"#555"}}>Queda: {fmt(leftover)}</div>}</> : <div style={{fontSize:12,color:"#444"}}>Sin alcanzar</div>}
+                    {applied>0 ? <><div style={{ fontWeight:700, fontSize:13, color:applied>=balance?successColor:"#7c3aed" }}>{applied>=balance?"✓ Saldada":`Aplica ${fmt(applied)}`}</div>{leftover>0&&<div style={{fontSize:11,color:muted}}>Queda: {fmt(leftover)}</div>}</> : <div style={{fontSize:12,color:"#444"}}>Sin alcanzar</div>}
                   </div>
                 </div>
               </div>
             ))}
-            {(() => { const sobrante = parseFloat(distributeAmount) - distribution.reduce((a,d)=>a+d.balance,0); return sobrante>0 ? <div style={{ background:"#10b98122", border:"1px solid #10b98144", borderRadius:8, padding:12, fontSize:13, color:"#10b981" }}>✓ Cubre toda la deuda. Sobrante: <strong>{fmt(sobrante)}</strong></div> : null; })()}
+            {(() => { const sobrante = parseFloat(distributeAmount) - distribution.reduce((a,d)=>a+d.balance,0); return sobrante>0 ? <div style={{ background:"#10b98122", border:"1px solid #10b98144", borderRadius:8, padding:12, fontSize:13, color:successColor }}>✓ Cubre toda la deuda. Sobrante: <strong>{fmt(sobrante)}</strong></div> : null; })()}
           </div>
         )}
-        {!distribution && <div style={{fontSize:12,color:"#555"}}>Ingresá el monto para ver cómo se distribuye.</div>}
+        {!distribution && <div style={{fontSize:12,color:muted}}>Ingresá el monto para ver cómo se distribuye.</div>}
       </Modal>}
 
       {noteModal && <Modal title="Registrar contacto" onClose={()=>setNoteModal(false)} onConfirm={addNote}>
@@ -584,13 +701,13 @@ function ClientsView({ data, onSave, companyId, companyName, selectedClientId, s
     onSave(); setAddModal(false); setAddForm({name:"",contact:"",phone:"",email:"",next_contact:""});
   }
   if (selectedClientId) return <ClientDetail clientId={selectedClientId} data={data} onBack={()=>setSelectedClientId(null)} onSave={onSave} companyName={companyName} companyId={companyId} />;
-  const statusFilters = [{key:"all",label:"Todos"},{key:"overdue",label:"Con vencidas",color:"#ff3b3b"},{key:"alert",label:"Vencen pronto",color:"#f59e0b"},{key:"contact",label:"Llamar hoy",color:"#6366f1"},{key:"ok",label:"Al día",color:"#10b981"}];
+  const statusFilters = [{key:"all",label:"Todos"},{key:"overdue",label:"Con vencidas",color:red},{key:"alert",label:"Vencen pronto",color:warnColor},{key:"contact",label:"Llamar hoy",color:"#5b21b6"},{key:"ok",label:"Al día",color:successColor}];
   const filtered = data.clients.filter(c => {
     const matchText = c.name.toLowerCase().includes(search.toLowerCase()) || (c.contact||"").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter==="all" || getClientStatus(c,data.invoices)===statusFilter;
     return matchText && matchStatus;
   });
-  const borderColorMap = {overdue:"#ff3b3b44",alert:"#f59e0b44",contact:"#6366f144",ok:bc};
+  const borderColorMap = {overdue:"#fecaca",alert:"#fde68a",contact:"#ddd6fe",ok:bc};
   return (
     <div>
       <div style={{ display:"flex", gap:12, marginBottom:16, alignItems:"center" }}>
@@ -600,7 +717,7 @@ function ClientsView({ data, onSave, companyId, companyName, selectedClientId, s
       <div style={{ display:"flex", gap:6, marginBottom:20, flexWrap:"wrap" }}>
         {statusFilters.map(f=><button key={f.key} style={S.navBtn(statusFilter===f.key,f.color)} onClick={()=>setStatusFilter(f.key)}>{f.label}</button>)}
       </div>
-      {filtered.length===0&&<div style={{color:"#555",fontSize:13,padding:"20px 0"}}>No hay clientes en esta categoría.</div>}
+      {filtered.length===0&&<div style={{color:muted,fontSize:13,padding:"20px 0"}}>No hay clientes en esta categoría.</div>}
       {filtered.map(c=>{
         const clInvs = data.invoices.filter(i=>i.client_id===c.id&&getInvoiceStatus(i)!=="paid");
         const debt = clInvs.reduce((a,i)=>a+getInvoiceBalance(i),0);
@@ -609,16 +726,16 @@ function ClientsView({ data, onSave, companyId, companyName, selectedClientId, s
           <div key={c.id} style={{...S.card,cursor:"pointer",borderColor:borderColorMap[cStatus]||bc}} onClick={()=>setSelectedClientId(c.id)}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <div style={{fontWeight:700,fontSize:15}}>{c.name} <span style={{fontWeight:400,fontSize:12,color:"#666"}}>— {c.contact}</span>
+                <div style={{fontWeight:700,fontSize:15}}>{c.name} <span style={{fontWeight:400,fontSize:12,color:sub}}>— {c.contact}</span>
                   {cStatus==="overdue"&&<> <Badge type="overdue">Vencida</Badge></>}
                   {cStatus==="alert"&&<> <Badge type="alert">Vence pronto</Badge></>}
                   {cStatus==="contact"&&<> <Badge type="today">Llamar hoy</Badge></>}
                 </div>
-                <div style={{fontSize:12,color:"#555",marginTop:4}}>{c.phone}{c.next_contact&&` · Recontactar: ${fmtDate(c.next_contact)}`}</div>
+                <div style={{fontSize:12,color:muted,marginTop:4}}>{c.phone}{c.next_contact&&` · Recontactar: ${fmtDate(c.next_contact)}`}</div>
               </div>
               <div style={{textAlign:"right"}}>
-                <div style={{fontSize:18,fontWeight:700,color:debt>0?(cStatus==="overdue"?"#ff3b3b":"#d97706"):"#10b981"}}>{fmt(debt)}</div>
-                <div style={{fontSize:11,color:"#555"}}>{clInvs.length} factura{clInvs.length!==1?"s":""}</div>
+                <div style={{fontSize:18,fontWeight:700,color:debt>0?(cStatus==="overdue"?red:"#d97706"):successColor}}>{fmt(debt)}</div>
+                <div style={{fontSize:11,color:muted}}>{clInvs.length} factura{clInvs.length!==1?"s":""}</div>
               </div>
             </div>
           </div>
@@ -689,7 +806,7 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
             <div>
               <div style={{ fontSize:16, fontWeight:700 }}>⚡ Carga rápida de facturas</div>
-              <div style={{ fontSize:12, color:"#555", marginTop:4 }}>Cargá varias facturas de una vez sin salir de la pantalla</div>
+              <div style={{ fontSize:12, color:muted, marginTop:4 }}>Cargá varias facturas de una vez sin salir de la pantalla</div>
             </div>
             <button style={S.btn()} onClick={()=>setQuickMode(false)}>← Cancelar</button>
           </div>
@@ -748,11 +865,11 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
               const cl=getClient(inv.client_id); const st=getInvoiceStatus(inv); const d=daysDiff(inv.due_date); const paid=getTotalPaid(inv);
               return (
                 <tr key={inv.id}>
-                  <td style={S.td}><span style={{cursor:"pointer",color:accent}} onClick={()=>onGoToClient(cl)}>{cl?.name}</span></td>
-                  <td style={S.td}><span style={{color:"#888"}}>{inv.number}</span></td>
-                  <td style={S.td}>{fmtDate(inv.due_date)}{d<0&&st!=="paid"&&<span style={{color:"#ff3b3b",fontSize:11}}> ({Math.abs(d)}d)</span>}{d>=0&&d<=ALERT_DAYS&&st!=="paid"&&<span style={{color:"#f59e0b",fontSize:11}}> (en {d}d)</span>}</td>
+                  <td style={S.td}><span style={{cursor:"pointer",color:red}} onClick={()=>onGoToClient(cl)}>{cl?.name}</span></td>
+                  <td style={S.td}><span style={{color:muted}}>{inv.number}</span></td>
+                  <td style={S.td}>{fmtDate(inv.due_date)}{d<0&&st!=="paid"&&<span style={{color:red,fontSize:11}}> ({Math.abs(d)}d)</span>}{d>=0&&d<=ALERT_DAYS&&st!=="paid"&&<span style={{color:warnColor,fontSize:11}}> (en {d}d)</span>}</td>
                   <td style={S.td}>{st==="paid"?<Badge type="paid">Cobrada</Badge>:paid>0?<Badge type="partial">Parcial</Badge>:st==="overdue"?<Badge type="overdue">Vencida</Badge>:<Badge type="pending">Pendiente</Badge>}</td>
-                  <td style={S.td}><strong>{fmt(getInvoiceBalance(inv))}</strong>{paid>0&&<div style={{fontSize:10,color:"#555"}}>de {fmt(inv.amount)}</div>}</td>
+                  <td style={S.td}><strong>{fmt(getInvoiceBalance(inv))}</strong>{paid>0&&<div style={{fontSize:10,color:muted}}>de {fmt(inv.amount)}</div>}</td>
                   <td style={S.td}>
                     <div style={{display:"flex",gap:6}}>
                       {(inv.payments||[]).length>0&&<button style={{...S.btn(),fontSize:11}} onClick={()=>setHistoryModal(inv)}>📋 Recibos</button>}
@@ -762,7 +879,7 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
                 </tr>
               );
             })}
-            {filtered.length===0&&<tr><td colSpan={6} style={{...S.td,color:"#555",textAlign:"center",padding:32}}>Sin facturas en esta categoría.</td></tr>}
+            {filtered.length===0&&<tr><td colSpan={6} style={{...S.td,color:muted,textAlign:"center",padding:32}}>Sin facturas en esta categoría.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -813,29 +930,29 @@ function StatsView({ data, onGoToClient }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24 }}>
         <div style={S.card}>
           <p style={S.sectionTitle}>💰 Top {TOP} por volumen de compras</p>
-          {byVolume.length === 0 ? <div style={{color:"#555",fontSize:13}}>Sin datos aún.</div> : byVolume.map((s, i) => (
+          {byVolume.length === 0 ? <div style={{color:muted,fontSize:13}}>Sin datos aún.</div> : byVolume.map((s, i) => (
             <div key={s.client.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${bc}` }}>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                 <span style={{ fontSize:18, width:28 }}>{medals[i] || `${i+1}.`}</span>
                 <div>
-                  <div style={{ fontWeight:700, fontSize:13, cursor:"pointer", color:accent }} onClick={() => onGoToClient(s.client)}>{s.client.name}</div>
-                  <div style={{ fontSize:11, color:"#555" }}>{s.invoiceCount} factura{s.invoiceCount!==1?"s":""}</div>
+                  <div style={{ fontWeight:700, fontSize:13, cursor:"pointer", color:red }} onClick={() => onGoToClient(s.client)}>{s.client.name}</div>
+                  <div style={{ fontSize:11, color:muted }}>{s.invoiceCount} factura{s.invoiceCount!==1?"s":""}</div>
                 </div>
               </div>
               <div style={{ textAlign:"right" }}>
                 <div style={{ fontWeight:700, fontSize:13 }}>{fmt(s.totalVolume)}</div>
-                {s.pendingDebt > 0 && <div style={{ fontSize:11, color:"#ff3b3b" }}>Debe: {fmt(s.pendingDebt)}</div>}
+                {s.pendingDebt > 0 && <div style={{ fontSize:11, color:red }}>Debe: {fmt(s.pendingDebt)}</div>}
               </div>
             </div>
           ))}
         </div>
         <div style={S.card}>
           <p style={S.sectionTitle}>⏱️ Top {TOP} mejores pagadores</p>
-          {byPunctuality.length === 0 ? <div style={{color:"#555",fontSize:13}}>Sin pagos registrados aún.</div> : byPunctuality.map((s, i) => (
+          {byPunctuality.length === 0 ? <div style={{color:muted,fontSize:13}}>Sin pagos registrados aún.</div> : byPunctuality.map((s, i) => (
             <div key={s.client.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${bc}` }}>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                 <span style={{ fontSize:18, width:28 }}>{medals[i] || `${i+1}.`}</span>
-                <div style={{ fontWeight:700, fontSize:13, cursor:"pointer", color:accent }} onClick={() => onGoToClient(s.client)}>{s.client.name}</div>
+                <div style={{ fontWeight:700, fontSize:13, cursor:"pointer", color:red }} onClick={() => onGoToClient(s.client)}>{s.client.name}</div>
               </div>
               <PunctBadge days={s.avgDaysLate} />
             </div>
@@ -879,10 +996,10 @@ function BoardView({ companyId }) {
   }
 
   const colorMap = {
-    default: { bg: surface, border: bc, label: "⬜ Normal" },
-    yellow:  { bg: "#f59e0b18", border: "#f59e0b44", label: "🟡 Importante" },
-    red:     { bg: "#ff3b3b18", border: "#ff3b3b44", label: "🔴 Urgente" },
-    green:   { bg: "#10b98118", border: "#10b98144", label: "🟢 Resuelto" },
+    default: { bg: white,      border: bc,         label: "⬜ Normal" },
+    yellow:  { bg: "#fffbeb",  border: "#fde68a",  label: "🟡 Importante" },
+    red:     { bg: "#fef2f2",  border: "#fecaca",  label: "🔴 Urgente" },
+    green:   { bg: "#f0fdf4",  border: "#bbf7d0",  label: "🟢 Resuelto" },
     purple:  { bg: "#a78bfa18", border: "#a78bfa44", label: "🟣 Info" },
   };
 
@@ -891,14 +1008,14 @@ function BoardView({ companyId }) {
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
         <div>
           <div style={{ fontSize:18, fontWeight:700, letterSpacing:1 }}>📋 Pizarrón del equipo</div>
-          <div style={{ fontSize:12, color:"#555", marginTop:4 }}>Notas, tareas y avisos para todos</div>
+          <div style={{ fontSize:12, color:muted, marginTop:4 }}>Notas, tareas y avisos para todos</div>
         </div>
         <button style={S.btn("primary")} onClick={() => setAdding(true)}>+ Nueva nota</button>
       </div>
 
       {adding && (
-        <div style={{ ...S.card, borderColor:`${accent}44`, marginBottom:24 }}>
-          <p style={{ ...S.sectionTitle, color:accent }}>Nueva nota</p>
+        <div style={{ ...S.card, borderColor:`${bc}`, marginBottom:24 }}>
+          <p style={{ ...S.sectionTitle, color:red }}>Nueva nota</p>
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <div><label style={S.label}>Tu nombre</label><input style={S.input} value={newNote.author} onChange={e=>setNewNote(n=>({...n,author:e.target.value}))} placeholder="ej: Patricio" /></div>
             <div><label style={S.label}>Nota</label><textarea style={{...S.input,height:100,resize:"vertical"}} value={newNote.text} onChange={e=>setNewNote(n=>({...n,text:e.target.value}))} placeholder="Escribí tu nota, tarea o aviso acá..." /></div>
@@ -917,23 +1034,23 @@ function BoardView({ companyId }) {
         </div>
       )}
 
-      {loading ? <div style={{color:"#555",fontSize:13}}>Cargando...</div> :
-       notes.length === 0 ? <div style={{color:"#555",fontSize:13,textAlign:"center",padding:"40px 0"}}>Sin notas aún. ¡Agregá la primera!</div> :
+      {loading ? <div style={{color:muted,fontSize:13}}>Cargando...</div> :
+       notes.length === 0 ? <div style={{color:muted,fontSize:13,textAlign:"center",padding:"40px 0"}}>Sin notas aún. ¡Agregá la primera!</div> :
        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:16 }}>
         {notes.map(note => {
           const c = colorMap[note.color] || colorMap.default;
           const date = new Date(note.created_at);
           const dateStr = `${date.getDate().toString().padStart(2,"0")}/${(date.getMonth()+1).toString().padStart(2,"0")}/${date.getFullYear()} ${date.getHours().toString().padStart(2,"0")}:${date.getMinutes().toString().padStart(2,"0")}`;
           return (
-            <div key={note.id} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:12, padding:20, position:"relative" }}>
+            <div key={note.id} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:12, padding:20, position:"relative", boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
                 <div>
-                  <div style={{ fontWeight:700, fontSize:13, color:accent }}>{note.author}</div>
-                  <div style={{ fontSize:11, color:"#555" }}>{dateStr}</div>
+                  <div style={{ fontWeight:700, fontSize:13, color:red }}>{note.author}</div>
+                  <div style={{ fontSize:11, color:muted }}>{dateStr}</div>
                 </div>
                 <button style={{ ...S.btn("danger"), padding:"4px 8px", fontSize:11 }} onClick={()=>deleteNote(note.id)}>×</button>
               </div>
-              <div style={{ fontSize:13, lineHeight:1.7, whiteSpace:"pre-wrap", color:"#ddd" }}>{note.text}</div>
+              <div style={{ fontSize:13, lineHeight:1.7, whiteSpace:"pre-wrap", color:sub }}>{note.text}</div>
             </div>
           );
         })}
@@ -946,42 +1063,62 @@ function BoardView({ companyId }) {
 function CompanySelector({ companies, onSelect, onAdd, onDelete }) {
   const [addModal, setAddModal] = useState(false);
   const [newName, setNewName] = useState("");
-
-  function handleAdd() {
-    if (!newName.trim()) return;
-    onAdd(newName.trim());
-    setNewName(""); setAddModal(false);
-  }
+  function handleAdd() { if (!newName.trim()) return; onAdd(newName.trim()); setNewName(""); setAddModal(false); }
 
   return (
-    <div style={{ minHeight:"100vh", background:bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'DM Mono','Courier New',monospace" }}>
-      <div style={{ marginBottom:40, textAlign:"center" }}>
-        <div style={{ fontSize:32, fontWeight:700, color:accent, letterSpacing:3 }}>⚡ COBRANZAS</div>
-        <div style={{ fontSize:13, color:"#555", marginTop:8, letterSpacing:2 }}>SELECCIONÁ UNA EMPRESA</div>
-      </div>
-      <div style={{ width:"100%", maxWidth:420, display:"flex", flexDirection:"column", gap:12 }}>
-        {companies.map(co => (
-          <div key={co.id} style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <button
-              style={{ flex:1, background:surface, border:`1px solid ${bc}`, borderRadius:12, padding:"20px 24px", cursor:"pointer", textAlign:"left", transition:"all 0.15s", color:"#e8e8f0", fontFamily:"'DM Mono','Courier New',monospace" }}
-              onMouseOver={e => e.currentTarget.style.borderColor = accent}
-              onMouseOut={e => e.currentTarget.style.borderColor = bc}
-              onClick={() => onSelect(co)}
-            >
-              <div style={{ fontSize:16, fontWeight:700 }}>{co.name}</div>
-            </button>
-            <button style={{ ...S.btn("danger"), padding:"8px 12px" }} onClick={() => { if (window.confirm(`¿Eliminar la empresa "${co.name}"? Se borrarán todos sus clientes y facturas.`)) onDelete(co.id); }}>×</button>
+    <div style={{ minHeight:"100vh", background:bg, display:"flex", fontFamily:font }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+      {/* Left panel — navy brand */}
+      <div style={{ width:"42%", background:navy, display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", padding:"60px 50px" }}>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:24 }}>
+          {/* Logo */}
+          <div style={{ width:90, height:90, borderRadius:"50%", background:white, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
+              <div style={{ fontSize:11, fontWeight:800, color:navy2, letterSpacing:1.5 }}>PROPACKING</div>
+              <div style={{ fontSize:36, fontWeight:900, color:red, lineHeight:1 }}>P</div>
+              <div style={{ fontSize:8, fontWeight:700, color:navy2, letterSpacing:1 }}>INSUMOS PARA EMBALAJE</div>
+            </div>
           </div>
-        ))}
-        <button style={{ ...S.btn("primary"), padding:"16px", fontSize:13, borderRadius:12, marginTop:8 }} onClick={() => setAddModal(true)}>+ Nueva empresa</button>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:28, fontWeight:800, color:white, letterSpacing:.5 }}>ProPacking</div>
+            <div style={{ fontSize:13, color:"rgba(255,255,255,.4)", marginTop:6, letterSpacing:1 }}>SISTEMA DE COBRANZAS</div>
+          </div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,.35)", lineHeight:1.8, textAlign:"center", maxWidth:260 }}>
+            Gestión de clientes, facturas y cobranzas en un solo lugar.
+          </div>
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div style={{ flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"60px 60px" }}>
+        <div style={{ maxWidth:380 }}>
+          <div style={{ fontSize:22, fontWeight:700, color:navy, marginBottom:6 }}>Seleccioná una empresa</div>
+          <div style={{ fontSize:13, color:muted, marginBottom:32 }}>Elegí con qué empresa vas a trabajar hoy</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:16 }}>
+            {companies.map(co => (
+              <div key={co.id} style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <button onClick={() => onSelect(co)}
+                  style={{ flex:1, background:white, border:`1px solid ${bc}`, borderRadius:12, padding:"16px 20px", cursor:"pointer", textAlign:"left", fontFamily:font, display:"flex", alignItems:"center", justifyContent:"space-between", transition:"all .15s" }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = navy; e.currentTarget.style.boxShadow = "0 4px 16px rgba(26,35,64,.1)"; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = bc; e.currentTarget.style.boxShadow = "none"; }}>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:600, color:navy }}>{co.name}</div>
+                    <div style={{ fontSize:11, color:muted, marginTop:2, letterSpacing:.5 }}>Empresa</div>
+                  </div>
+                  <span style={{ color:muted, fontSize:16 }}>→</span>
+                </button>
+                <button style={{ ...S.btn("danger"), padding:"10px 12px" }} onClick={() => { if (window.confirm(`¿Eliminar "${co.name}"?`)) onDelete(co.id); }}>×</button>
+              </div>
+            ))}
+          </div>
+          <button style={{ ...S.btn("primary"), width:"100%", padding:"14px", fontSize:14, borderRadius:10 }} onClick={() => setAddModal(true)}>+ Nueva empresa</button>
+        </div>
       </div>
 
       {addModal && <Modal title="Nueva empresa" onClose={()=>setAddModal(false)} onConfirm={handleAdd}>
         <Field label="Nombre de la empresa" value={newName} onChange={setNewName} />
       </Modal>}
-    </div>
-  );
-}
 
 export default function App() {
   const [companies, setCompanies] = useState([]);
@@ -1034,32 +1171,101 @@ export default function App() {
 
   function goToClient(client) { if (!client) return; setSelectedClientId(client.id); setView("clients"); }
 
-  if (loading) return <div style={{ minHeight:"100vh", background:bg, display:"flex", alignItems:"center", justifyContent:"center", color:"#666", fontFamily:"'DM Mono',monospace", fontSize:14 }}>Cargando...</div>;
+  if (loading) return (
+    <div style={{ minHeight:"100vh", background:bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:font }}>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:24, fontWeight:800, color:navy, letterSpacing:2, marginBottom:8 }}>COBRANZAS</div>
+        <div style={{ fontSize:13, color:muted }}>Cargando...</div>
+      </div>
+    </div>
+  );
 
   if (!currentCompany) return <CompanySelector companies={companies} onSelect={selectCompany} onAdd={addCompany} onDelete={deleteCompany} />;
 
+  const navItems = [
+    { id:"dashboard", label:"Dashboard",    icon:"▦" },
+    { id:"clients",   label:"Clientes",     icon:"◈" },
+    { id:"invoices",  label:"Facturas",     icon:"◉" },
+    { id:"stats",     label:"Estadísticas", icon:"◎" },
+    { id:"board",     label:"Pizarrón",     icon:"◫" },
+  ];
+
+  const totalCartera = data.invoices.filter(i=>getInvoiceStatus(i)!=="paid").reduce((a,i)=>a+getInvoiceBalance(i),0);
+  const totalVencidas = data.invoices.filter(i=>getInvoiceStatus(i)==="overdue").length;
+
   return (
-    <div style={{ minHeight:"100vh", background:bg, color:"#e8e8f0", fontFamily:"'DM Mono','Courier New',monospace" }}>
-      <header style={{ borderBottom:`1px solid ${bc}`, padding:"16px 28px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#0f0f13ee", backdropFilter:"blur(8px)", position:"sticky", top:0, zIndex:50 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-          <span style={{ fontSize:18, fontWeight:700, letterSpacing:2, color:accent, textTransform:"uppercase" }}>⚡ Cobranzas</span>
-          <button style={{ ...S.btn(), fontSize:11, padding:"4px 10px" }} onClick={() => setCurrentCompany(null)}>
-            {currentCompany.name} ↩
-          </button>
+    <div style={{ minHeight:"100vh", background:bg, color:navy, fontFamily:font, display:"flex" }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+      {/* SIDEBAR */}
+      <aside style={{ width:220, minHeight:"100vh", background:navy, display:"flex", flexDirection:"column", position:"fixed", top:0, left:0, zIndex:40 }}>
+
+        {/* Logo */}
+        <div style={{ padding:"28px 24px 24px", borderBottom:"1px solid rgba(255,255,255,.08)", display:"flex", alignItems:"center", gap:14 }}>
+          <div style={{ width:44, height:44, borderRadius:"50%", background:white, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
+              <div style={{ fontSize:7, fontWeight:800, color:navy2, letterSpacing:1 }}>PROPACKING</div>
+              <div style={{ fontSize:18, fontWeight:900, color:red, lineHeight:1 }}>P</div>
+              <div style={{ fontSize:5, fontWeight:700, color:navy2, letterSpacing:.5 }}>INSUMOS EMBALAJE</div>
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:14, fontWeight:700, color:white, letterSpacing:.5 }}>{currentCompany.name}</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,.35)", marginTop:2, letterSpacing:.5 }}>Cobranzas</div>
+          </div>
         </div>
-        <nav style={{display:"flex",gap:4}}>
-          {[["dashboard","Dashboard"],["clients","Clientes"],["invoices","Facturas"],["stats","Estadísticas"],["board","Pizarrón"]].map(([v,l])=>(
-            <button key={v} style={S.navBtn(view===v)} onClick={()=>{setView(v);if(v!=="clients")setSelectedClientId(null);}}>{l}</button>
+
+        {/* Company switcher */}
+        <div style={{ padding:"14px 24px", borderBottom:"1px solid rgba(255,255,255,.08)" }}>
+          <div style={{ fontSize:10, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:6 }}>Empresa activa</div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div style={{ fontSize:13, fontWeight:600, color:white }}>{currentCompany.name}</div>
+            <button onClick={() => setCurrentCompany(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"rgba(255,255,255,.3)", fontSize:11, fontFamily:font, padding:0 }}>Cambiar ⇄</button>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ padding:"16px 12px", flex:1 }}>
+          {navItems.map(item => (
+            <div key={item.id} style={S.navItem(view===item.id)}
+              onClick={() => { setView(item.id); if(item.id!=="clients") setSelectedClientId(null); }}>
+              <span style={{ fontSize:15, width:20, textAlign:"center" }}>{item.icon}</span>
+              <span>{item.label}</span>
+            </div>
           ))}
         </nav>
-      </header>
-      <main style={{ padding:"28px 28px", maxWidth:1100, margin:"0 auto" }}>
-        {view==="dashboard"&&<Dashboard data={data} onGoToClient={goToClient} companyName={currentCompany.name} />}
-        {view==="clients"&&<ClientsView data={data} onSave={()=>loadData()} companyId={currentCompany.id} companyName={currentCompany.name} selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId} />}
-        {view==="invoices"&&<InvoicesView data={data} onSave={()=>loadData()} companyId={currentCompany.id} onGoToClient={goToClient} />}
-        {view==="stats"&&<StatsView data={data} onGoToClient={goToClient} />}
-        {view==="board"&&<BoardView companyId={currentCompany.id} />}
-      </main>
+
+        {/* Footer KPI */}
+        <div style={{ padding:"20px 24px", borderTop:"1px solid rgba(255,255,255,.08)" }}>
+          <div style={{ fontSize:10, color:"rgba(255,255,255,.3)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:6 }}>Cartera total</div>
+          <div style={{ fontSize:18, fontWeight:700, color:"#ff8080" }}>{fmt(totalCartera)}</div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,.25)", marginTop:4 }}>{totalVencidas} vencidas · {data.clients.length} clientes</div>
+        </div>
+      </aside>
+
+      {/* MAIN */}
+      <div style={{ marginLeft:220, flex:1, display:"flex", flexDirection:"column", minHeight:"100vh" }}>
+        {/* Topbar */}
+        <div style={{ background:white, borderBottom:`1px solid ${bc}`, padding:"0 32px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:20 }}>
+          <div>
+            <div style={{ fontSize:17, fontWeight:700, color:navy }}>
+              {navItems.find(n=>n.id===view)?.label || "Dashboard"}
+            </div>
+            <div style={{ fontSize:12, color:muted, marginTop:1 }}>
+              {new Date().toLocaleDateString("es-AR",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <main style={{ padding:"28px 32px", flex:1 }}>
+          {view==="dashboard"&&<Dashboard data={data} onGoToClient={goToClient} companyName={currentCompany.name} />}
+          {view==="clients"&&<ClientsView data={data} onSave={()=>loadData()} companyId={currentCompany.id} companyName={currentCompany.name} selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId} />}
+          {view==="invoices"&&<InvoicesView data={data} onSave={()=>loadData()} companyId={currentCompany.id} onGoToClient={goToClient} />}
+          {view==="stats"&&<StatsView data={data} onGoToClient={goToClient} />}
+          {view==="board"&&<BoardView companyId={currentCompany.id} />}
+        </main>
+      </div>
     </div>
   );
 }
