@@ -149,7 +149,7 @@ function InvoiceRow({ inv, onMarkPaid, onPartialPay, onDelete, onViewPayments })
   );
 }
 
-function AIAssistant({ client, invoices }) {
+function AIAssistant({ client, invoices, companyName }) {
   const [channel, setChannel] = useState("whatsapp");
   const [tone, setTone] = useState("cordial");
   const [loading, setLoading] = useState(false);
@@ -166,13 +166,18 @@ function AIAssistant({ client, invoices }) {
       const st = getInvoiceStatus(i); const d = daysDiff(i.due_date);
       return `- ${i.number}: saldo ${fmt(getInvoiceBalance(i))}, vence ${fmtDate(i.due_date)}${st === "overdue" ? ` (vencida hace ${Math.abs(d)} dias)` : ` (en ${d} dias)`}`;
     }).join("\n");
-    const prompt = `Sos un asistente de cobranzas para una empresa argentina. Genera un mensaje de cobranza para enviar por ${channel === "whatsapp" ? "WhatsApp" : channel === "email" ? "email" : "llamada telefonica (guion)"}.
-Datos: Empresa: ${client.name}, Contacto: ${client.contact || "sin nombre"}, Deuda: ${fmt(totalDebt)}
-Facturas:
+    const prompt = `Sos un asistente de cobranzas que trabaja PARA la empresa "${companyName}". Vas a contactar a un cliente que le debe dinero a ${companyName}.
+
+Genera un mensaje de cobranza para enviar por ${channel === "whatsapp" ? "WhatsApp" : channel === "email" ? "email" : "llamada telefonica (guion)"}.
+Datos del cliente deudor: Empresa: ${client.name}, Contacto: ${client.contact || "sin nombre"}, Deuda total: ${fmt(totalDebt)}
+Facturas pendientes:
 ${invoiceSummary}
 ${lastNote ? `Ultimo contacto: "${lastNote.text}" (${fmtDate(lastNote.date)})` : "Sin contactos previos"}
 Tono: ${tone === "cordial" ? "Cordial y amable" : tone === "firme" ? "Firme y directo" : "Urgente"}
-Escribi en espanol rioplatense, tuteo. ${channel === "whatsapp" ? "Max 5 lineas." : channel === "email" ? "Con asunto en primera linea." : "Guion de llamada."} No uses asteriscos ni markdown.`;
+- Escribi en espanol rioplatense, tuteo
+- El mensaje lo manda alguien de ${companyName}, firma como ${companyName}
+- ${channel === "whatsapp" ? "Max 5 lineas." : channel === "email" ? "Con asunto en primera linea." : "Guion de llamada con apertura, desarrollo y cierre."}
+- No uses asteriscos ni markdown`;
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -218,8 +223,10 @@ Escribi en espanol rioplatense, tuteo. ${channel === "whatsapp" ? "Max 5 lineas.
   );
 }
 
-function Dashboard({ data, onGoToClient }) {
+function Dashboard({ data, onGoToClient, companyName }) {
   const [sortAsc, setSortAsc] = useState(true);
+  const [aiSummary, setAiSummary] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
   const overdueInvs = data.invoices.filter(i => getInvoiceStatus(i) === "overdue");
   const pendingInvs = data.invoices.filter(i => getInvoiceStatus(i) === "pending");
   const alertInvs = pendingInvs.filter(i => daysDiff(i.due_date) <= ALERT_DAYS);
@@ -228,6 +235,52 @@ function Dashboard({ data, onGoToClient }) {
   const totalOverdue = overdueInvs.reduce((a,i)=>a+getInvoiceBalance(i),0);
   const totalPending = pendingInvs.reduce((a,i)=>a+getInvoiceBalance(i),0);
   const sortedOverdue = [...overdueInvs].sort((a,b) => sortAsc ? new Date(a.due_date)-new Date(b.due_date) : new Date(b.due_date)-new Date(a.due_date));
+
+  useEffect(() => {
+    if (data.clients.length === 0) return;
+    generateSummary();
+  }, [companyName]);
+
+  async function generateSummary() {
+    setAiLoading(true); setAiSummary("");
+    const overdueClients = overdueInvs.map(i => {
+      const cl = getClient(i.client_id);
+      return `- ${cl?.name}: ${fmt(getInvoiceBalance(i))} vencida hace ${Math.abs(daysDiff(i.due_date))} dias`;
+    }).join("\n");
+    const contactClients = toContact.map(c => {
+      const lastNote = c.notes?.[0];
+      return `- ${c.name}${lastNote ? `: ultima nota "${lastNote.text}"` : ""}`;
+    }).join("\n");
+    const alertClients = alertInvs.map(i => {
+      const cl = getClient(i.client_id);
+      return `- ${cl?.name}: ${fmt(getInvoiceBalance(i))} vence en ${daysDiff(i.due_date)} dias`;
+    }).join("\n");
+
+    const prompt = `Sos el asistente de cobranzas de ${companyName}. Hoy es ${fmtDate(TODAY.toISOString().split("T")[0])}.
+Genera un resumen ejecutivo breve y directo del dia para el equipo de cobranzas. Maximo 5 oraciones.
+Mencioná lo mas urgente primero. Usa nombres reales. Tono profesional pero informal, espanol rioplatense.
+No uses asteriscos, bullets ni markdown. Solo texto plano en parrafos cortos.
+
+Datos de hoy:
+- Total vencido: ${fmt(totalOverdue)} (${overdueInvs.length} facturas)
+- Por vencer pronto: ${fmt(alertInvs.reduce((a,i)=>a+getInvoiceBalance(i),0))} (${alertInvs.length} facturas)
+- Clientes para llamar hoy: ${toContact.length}
+${overdueClients ? `\nFacturas vencidas:\n${overdueClients}` : ""}
+${contactClients ? `\nContactar hoy:\n${contactClients}` : ""}
+${alertClients ? `\nVencen pronto:\n${alertClients}` : ""}`;
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 300, messages: [{ role: "user", content: prompt }] }),
+      });
+      const d = await res.json();
+      setAiSummary(d.content?.map(b => b.text || "").join("") || "");
+    } catch {}
+    setAiLoading(false);
+  }
+
   const Stat = ({color,label,value,sub}) => (
     <div style={{ background:surface, border:`1px solid ${color}44`, borderRadius:12, padding:20 }}>
       <div style={{ fontSize:11, color:"#666", letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>{label}</div>
@@ -242,6 +295,17 @@ function Dashboard({ data, onGoToClient }) {
         <Stat color="#d97706" label="Por vencer" value={fmt(totalPending)} sub={`${pendingInvs.length} factura${pendingInvs.length!==1?"s":""}`} />
         <Stat color="#6366f1" label="Contactar hoy" value={toContact.length} sub={`cliente${toContact.length!==1?"s":""} pendiente${toContact.length!==1?"s":""}`} />
         <Stat color="#10b981" label="Total en cartera" value={fmt(totalOverdue+totalPending)} sub="por cobrar" />
+      </div>
+
+      {/* AI Daily Summary */}
+      <div style={{ ...S.card, borderColor:`${accent}44`, marginBottom:24 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: aiSummary||aiLoading ? 12 : 0 }}>
+          <p style={{ ...S.sectionTitle, margin:0, color:accent }}>🤖 Resumen del día — {companyName}</p>
+          <button style={{ ...S.btn(), fontSize:11 }} onClick={generateSummary} disabled={aiLoading}>↻ Actualizar</button>
+        </div>
+        {aiLoading && <div style={{ color:"#555", fontSize:13 }}>Analizando tu cartera...</div>}
+        {aiSummary && !aiLoading && <div style={{ fontSize:13, lineHeight:1.8, color:"#ccc", whiteSpace:"pre-wrap" }}>{aiSummary}</div>}
+        {!aiSummary && !aiLoading && data.clients.length === 0 && <div style={{ color:"#555", fontSize:13 }}>Cargá clientes y facturas para ver el resumen.</div>}
       </div>
       {alertInvs.length > 0 && (
         <div style={{ ...S.card, borderColor:"#f59e0b44", marginBottom:24 }}>
@@ -290,7 +354,7 @@ function Dashboard({ data, onGoToClient }) {
   );
 }
 
-function ClientDetail({ clientId, data, onBack, onSave }) {
+function ClientDetail({ clientId, data, onBack, onSave, companyName }) {
   const cl = data.clients.find(c => c.id === clientId);
   const clInvoices = data.invoices.filter(i => i.client_id === clientId);
   const totalDebt = clInvoices.reduce((a,i)=>a+getInvoiceBalance(i),0);
@@ -411,7 +475,7 @@ function ClientDetail({ clientId, data, onBack, onSave }) {
                 </div>
               ))}
           </div>
-          <AIAssistant client={cl} invoices={data.invoices} />
+          <AIAssistant client={cl} invoices={data.invoices} companyName={companyName} />
         </div>
         <div style={S.card}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
@@ -484,7 +548,7 @@ function ClientsView({ data, onSave, companyId, selectedClientId, setSelectedCli
     await supabase.from("clients").insert({ company_id: companyId, name:addForm.name||"Sin nombre", contact:addForm.contact||"", phone:addForm.phone||"", email:addForm.email||"", notes:[], next_contact:addForm.next_contact||null });
     onSave(); setAddModal(false); setAddForm({name:"",contact:"",phone:"",email:"",next_contact:""});
   }
-  if (selectedClientId) return <ClientDetail clientId={selectedClientId} data={data} onBack={()=>setSelectedClientId(null)} onSave={onSave} />;
+  if (selectedClientId) return <ClientDetail clientId={selectedClientId} data={data} onBack={()=>setSelectedClientId(null)} onSave={onSave} companyName={companyName} />;
   const statusFilters = [{key:"all",label:"Todos"},{key:"overdue",label:"Con vencidas",color:"#ff3b3b"},{key:"alert",label:"Vencen pronto",color:"#f59e0b"},{key:"contact",label:"Llamar hoy",color:"#6366f1"},{key:"ok",label:"Al día",color:"#10b981"}];
   const filtered = data.clients.filter(c => {
     const matchText = c.name.toLowerCase().includes(search.toLowerCase()) || (c.contact||"").toLowerCase().includes(search.toLowerCase());
@@ -724,7 +788,7 @@ export default function App() {
         </nav>
       </header>
       <main style={{ padding:"28px 28px", maxWidth:1100, margin:"0 auto" }}>
-        {view==="dashboard"&&<Dashboard data={data} onGoToClient={goToClient} />}
+        {view==="dashboard"&&<Dashboard data={data} onGoToClient={goToClient} companyName={currentCompany.name} />}
         {view==="clients"&&<ClientsView data={data} onSave={()=>loadData()} companyId={currentCompany.id} selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId} />}
         {view==="invoices"&&<InvoicesView data={data} onSave={()=>loadData()} companyId={currentCompany.id} onGoToClient={goToClient} />}
       </main>
