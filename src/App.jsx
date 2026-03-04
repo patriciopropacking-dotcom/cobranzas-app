@@ -361,7 +361,7 @@ ${alertClients ? `\nVencen pronto:\n${alertClients}` : ""}`;
   );
 }
 
-function ClientDetail({ clientId, data, onBack, onSave, companyName }) {
+function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }) {
   const cl = data.clients.find(c => c.id === clientId);
   const clInvoices = data.invoices.filter(i => i.client_id === clientId);
   const totalDebt = clInvoices.reduce((a,i)=>a+getInvoiceBalance(i),0);
@@ -404,7 +404,7 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName }) {
     onSave(); setNoteModal(false); setNoteForm({ note:"", next_contact:"" });
   }
   async function addInvoice() {
-    await supabase.from("invoices").insert({ client_id: clientId, number: invForm.number||"FC-????", amount: parseFloat(invForm.amount)||0, payments: [], due_date: invForm.due_date||"" });
+    await supabase.from("invoices").insert({ company_id: companyId, client_id: clientId, number: invForm.number||"FC-????", amount: parseFloat(invForm.amount)||0, payments: [], due_date: invForm.due_date||"" });
     onSave(); setInvModal(false); setInvForm({ number:"", amount:"", due_date:"" });
   }
   async function applyPayment() {
@@ -564,11 +564,17 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName }) {
         <Field label="Monto total ($)" type="number" value={invForm.amount} onChange={v=>setInvForm(f=>({...f,amount:v}))} />
         <Field label="Fecha de vencimiento" type="date" value={invForm.due_date} onChange={v=>setInvForm(f=>({...f,due_date:v}))} />
       </Modal>}
+
+      {payProfileModal&&<Modal title="Forma de pago habitual" onClose={()=>setPayProfileModal(false)} onConfirm={savePayProfile}>
+        <Field label="Medio de pago (ej: cheque, transferencia, efectivo)"><input style={S.input} value={payProfileForm.method} onChange={e=>setPayProfileForm(f=>({...f,method:e.target.value}))} placeholder="ej: Cheque / Transferencia bancaria" /></Field>
+        <Field label="Plazo habitual (ej: 30 días, 15 días)"><input style={S.input} value={payProfileForm.term} onChange={e=>setPayProfileForm(f=>({...f,term:e.target.value}))} placeholder="ej: Cheque a 30 días" /></Field>
+        <Field label="Observaciones (comportamiento de pago)"><textarea style={{...S.input,height:90,resize:"vertical"}} value={payProfileForm.notes} onChange={e=>setPayProfileForm(f=>({...f,notes:e.target.value}))} placeholder="ej: Siempre paga los viernes. A veces pide prórroga de 15 días. Buen cliente pero lento." /></Field>
+      </Modal>}
     </div>
   );
 }
 
-function ClientsView({ data, onSave, companyId, selectedClientId, setSelectedClientId }) {
+function ClientsView({ data, onSave, companyId, companyName, selectedClientId, setSelectedClientId }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [addModal, setAddModal] = useState(false);
@@ -577,7 +583,7 @@ function ClientsView({ data, onSave, companyId, selectedClientId, setSelectedCli
     await supabase.from("clients").insert({ company_id: companyId, name:addForm.name||"Sin nombre", contact:addForm.contact||"", phone:addForm.phone||"", email:addForm.email||"", notes:[], next_contact:addForm.next_contact||null });
     onSave(); setAddModal(false); setAddForm({name:"",contact:"",phone:"",email:"",next_contact:""});
   }
-  if (selectedClientId) return <ClientDetail clientId={selectedClientId} data={data} onBack={()=>setSelectedClientId(null)} onSave={onSave} companyName={companyName} />;
+  if (selectedClientId) return <ClientDetail clientId={selectedClientId} data={data} onBack={()=>setSelectedClientId(null)} onSave={onSave} companyName={companyName} companyId={companyId} />;
   const statusFilters = [{key:"all",label:"Todos"},{key:"overdue",label:"Con vencidas",color:"#ff3b3b"},{key:"alert",label:"Vencen pronto",color:"#f59e0b"},{key:"contact",label:"Llamar hoy",color:"#6366f1"},{key:"ok",label:"Al día",color:"#10b981"}];
   const filtered = data.clients.filter(c => {
     const matchText = c.name.toLowerCase().includes(search.toLowerCase()) || (c.contact||"").toLowerCase().includes(search.toLowerCase());
@@ -634,6 +640,27 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
   const [addModal, setAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ clientId:"",number:"",amount:"",due_date:"" });
   const [historyModal, setHistoryModal] = useState(null);
+  const [quickMode, setQuickMode] = useState(false);
+  const [quickRows, setQuickRows] = useState([{ clientId: data.clients[0]?.id||"", number:"", amount:"", due_date:"" }]);
+  const [quickSaving, setQuickSaving] = useState(false);
+  const [quickDone, setQuickDone] = useState(0);
+
+  function addQuickRow() { setQuickRows(r => [...r, { clientId: data.clients[0]?.id||"", number:"", amount:"", due_date:"" }]); }
+  function removeQuickRow(i) { setQuickRows(r => r.filter((_,idx)=>idx!==i)); }
+  function updateQuickRow(i, field, val) { setQuickRows(r => r.map((row,idx) => idx===i ? {...row,[field]:val} : row)); }
+
+  async function saveQuickRows() {
+    setQuickSaving(true); setQuickDone(0);
+    const valid = quickRows.filter(r => r.number && r.amount && r.due_date && r.clientId);
+    for (const r of valid) {
+      await supabase.from("invoices").insert({ company_id: companyId, client_id: r.clientId, number: r.number, amount: parseFloat(r.amount)||0, payments:[], due_date: r.due_date });
+      setQuickDone(d => d+1);
+    }
+    setQuickSaving(false);
+    setQuickRows([{ clientId: data.clients[0]?.id||"", number:"", amount:"", due_date:"" }]);
+    setQuickMode(false); setQuickDone(0);
+    onSave();
+  }
 
   async function deletePayment(invId, paymentId) {
     const inv = data.invoices.find(i => i.id === invId);
@@ -657,11 +684,56 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
 
   return (
     <div>
+      {quickMode ? (
+        <div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+            <div>
+              <div style={{ fontSize:16, fontWeight:700 }}>⚡ Carga rápida de facturas</div>
+              <div style={{ fontSize:12, color:"#555", marginTop:4 }}>Cargá varias facturas de una vez sin salir de la pantalla</div>
+            </div>
+            <button style={S.btn()} onClick={()=>setQuickMode(false)}>← Cancelar</button>
+          </div>
+          <div style={S.card}>
+            <table style={{...S.table, marginBottom:12}}>
+              <thead><tr>
+                <th style={S.th}>Cliente</th>
+                <th style={S.th}>N° Factura</th>
+                <th style={S.th}>Monto ($)</th>
+                <th style={S.th}>Vencimiento</th>
+                <th style={S.th}></th>
+              </tr></thead>
+              <tbody>
+                {quickRows.map((row, i) => (
+                  <tr key={i}>
+                    <td style={S.td}>
+                      <select style={{...S.input, padding:"6px 10px"}} value={row.clientId} onChange={e=>updateQuickRow(i,"clientId",e.target.value)}>
+                        {data.clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </td>
+                    <td style={S.td}><input style={{...S.input, padding:"6px 10px"}} value={row.number} onChange={e=>updateQuickRow(i,"number",e.target.value)} placeholder="FC-0001" /></td>
+                    <td style={S.td}><input style={{...S.input, padding:"6px 10px"}} type="number" value={row.amount} onChange={e=>updateQuickRow(i,"amount",e.target.value)} placeholder="0" /></td>
+                    <td style={S.td}><input style={{...S.input, padding:"6px 10px"}} type="date" value={row.due_date} onChange={e=>updateQuickRow(i,"due_date",e.target.value)} /></td>
+                    <td style={S.td}><button style={{...S.btn("danger"), padding:"4px 8px"}} onClick={()=>removeQuickRow(i)}>×</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <button style={S.btn()} onClick={addQuickRow}>+ Agregar fila</button>
+              <button style={{...S.btn("primary"), padding:"8px 20px"}} onClick={saveQuickRows} disabled={quickSaving}>
+                {quickSaving ? `Guardando... (${quickDone}/${quickRows.filter(r=>r.number&&r.amount&&r.due_date).length})` : `✓ Guardar ${quickRows.filter(r=>r.number&&r.amount&&r.due_date).length} factura${quickRows.filter(r=>r.number&&r.amount&&r.due_date).length!==1?"s":""}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+      <div>
       <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
         {[["all","Todas"],["overdue","Vencidas"],["alert","Vencen pronto"],["pending","Pendientes"],["partial","Pago parcial"],["paid","Cobradas"]].map(([f,l])=>(
           <button key={f} style={S.navBtn(filter===f)} onClick={()=>setFilter(f)}>{l}</button>
         ))}
         <div style={{flex:1}}/>
+        <button style={{...S.btn("warning"), marginRight:6}} onClick={()=>setQuickMode(true)}>⚡ Carga rápida</button>
         <button style={S.btn("primary")} onClick={()=>{setAddForm({clientId:data.clients[0]?.id||"",number:"",amount:"",due_date:""});setAddModal(true);}}>+ Nueva factura</button>
       </div>
       <div style={S.card}>
@@ -701,12 +773,8 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
         <Field label="Fecha de vencimiento" type="date" value={addForm.due_date} onChange={v=>setAddForm(f=>({...f,due_date:v}))} />
       </Modal>}
       {historyModal&&<PaymentHistoryModal inv={data.invoices.find(i=>i.id===historyModal.id)||historyModal} onDeletePayment={deletePayment} onClose={()=>setHistoryModal(null)} />}
-
-      {payProfileModal&&<Modal title="Forma de pago habitual" onClose={()=>setPayProfileModal(false)} onConfirm={savePayProfile}>
-        <Field label="Medio de pago (ej: cheque, transferencia, efectivo)"><input style={S.input} value={payProfileForm.method} onChange={e=>setPayProfileForm(f=>({...f,method:e.target.value}))} placeholder="ej: Cheque / Transferencia bancaria" /></Field>
-        <Field label="Plazo habitual (ej: 30 días, 15 días)"><input style={S.input} value={payProfileForm.term} onChange={e=>setPayProfileForm(f=>({...f,term:e.target.value}))} placeholder="ej: Cheque a 30 días" /></Field>
-        <Field label="Observaciones (comportamiento de pago)"><textarea style={{...S.input,height:90,resize:"vertical"}} value={payProfileForm.notes} onChange={e=>setPayProfileForm(f=>({...f,notes:e.target.value}))} placeholder="ej: Siempre paga los viernes. A veces pide prórroga de 15 días. Buen cliente pero lento." /></Field>
-      </Modal>}
+    </div>
+      )}
     </div>
   );
 }
@@ -779,6 +847,101 @@ function StatsView({ data, onGoToClient }) {
   );
 }
 
+
+// ── BOARD VIEW ──
+function BoardView({ companyId }) {
+  const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newNote, setNewNote] = useState({ author:"", text:"", color:"default" });
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => { loadNotes(); }, [companyId]);
+
+  async function loadNotes() {
+    setLoading(true);
+    const { data } = await supabase.from("board_notes").select("*").eq("company_id", companyId).order("created_at", { ascending: false });
+    setNotes(data || []);
+    setLoading(false);
+  }
+
+  async function addNote() {
+    if (!newNote.text.trim()) return;
+    await supabase.from("board_notes").insert({ company_id: companyId, author: newNote.author||"Anónimo", text: newNote.text, color: newNote.color });
+    setNewNote({ author:"", text:"", color:"default" });
+    setAdding(false);
+    loadNotes();
+  }
+
+  async function deleteNote(id) {
+    if (!window.confirm("¿Eliminar esta nota?")) return;
+    await supabase.from("board_notes").delete().eq("id", id);
+    loadNotes();
+  }
+
+  const colorMap = {
+    default: { bg: surface, border: bc, label: "⬜ Normal" },
+    yellow:  { bg: "#f59e0b18", border: "#f59e0b44", label: "🟡 Importante" },
+    red:     { bg: "#ff3b3b18", border: "#ff3b3b44", label: "🔴 Urgente" },
+    green:   { bg: "#10b98118", border: "#10b98144", label: "🟢 Resuelto" },
+    purple:  { bg: "#a78bfa18", border: "#a78bfa44", label: "🟣 Info" },
+  };
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+        <div>
+          <div style={{ fontSize:18, fontWeight:700, letterSpacing:1 }}>📋 Pizarrón del equipo</div>
+          <div style={{ fontSize:12, color:"#555", marginTop:4 }}>Notas, tareas y avisos para todos</div>
+        </div>
+        <button style={S.btn("primary")} onClick={() => setAdding(true)}>+ Nueva nota</button>
+      </div>
+
+      {adding && (
+        <div style={{ ...S.card, borderColor:`${accent}44`, marginBottom:24 }}>
+          <p style={{ ...S.sectionTitle, color:accent }}>Nueva nota</p>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <div><label style={S.label}>Tu nombre</label><input style={S.input} value={newNote.author} onChange={e=>setNewNote(n=>({...n,author:e.target.value}))} placeholder="ej: Patricio" /></div>
+            <div><label style={S.label}>Nota</label><textarea style={{...S.input,height:100,resize:"vertical"}} value={newNote.text} onChange={e=>setNewNote(n=>({...n,text:e.target.value}))} placeholder="Escribí tu nota, tarea o aviso acá..." /></div>
+            <div><label style={S.label}>Tipo</label>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {Object.entries(colorMap).map(([k,v]) => (
+                  <button key={k} style={{ ...S.btn(newNote.color===k?"primary":"default"), fontSize:11 }} onClick={()=>setNewNote(n=>({...n,color:k}))}>{v.label}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button style={S.btn()} onClick={()=>setAdding(false)}>Cancelar</button>
+              <button style={S.btn("primary")} onClick={addNote}>Publicar nota</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? <div style={{color:"#555",fontSize:13}}>Cargando...</div> :
+       notes.length === 0 ? <div style={{color:"#555",fontSize:13,textAlign:"center",padding:"40px 0"}}>Sin notas aún. ¡Agregá la primera!</div> :
+       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:16 }}>
+        {notes.map(note => {
+          const c = colorMap[note.color] || colorMap.default;
+          const date = new Date(note.created_at);
+          const dateStr = `${date.getDate().toString().padStart(2,"0")}/${(date.getMonth()+1).toString().padStart(2,"0")}/${date.getFullYear()} ${date.getHours().toString().padStart(2,"0")}:${date.getMinutes().toString().padStart(2,"0")}`;
+          return (
+            <div key={note.id} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:12, padding:20, position:"relative" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:13, color:accent }}>{note.author}</div>
+                  <div style={{ fontSize:11, color:"#555" }}>{dateStr}</div>
+                </div>
+                <button style={{ ...S.btn("danger"), padding:"4px 8px", fontSize:11 }} onClick={()=>deleteNote(note.id)}>×</button>
+              </div>
+              <div style={{ fontSize:13, lineHeight:1.7, whiteSpace:"pre-wrap", color:"#ddd" }}>{note.text}</div>
+            </div>
+          );
+        })}
+       </div>
+      }
+    </div>
+  );
+}
 
 function CompanySelector({ companies, onSelect, onAdd, onDelete }) {
   const [addModal, setAddModal] = useState(false);
@@ -885,16 +1048,17 @@ export default function App() {
           </button>
         </div>
         <nav style={{display:"flex",gap:4}}>
-          {[["dashboard","Dashboard"],["clients","Clientes"],["invoices","Facturas"],["stats","Estadísticas"]].map(([v,l])=>(
+          {[["dashboard","Dashboard"],["clients","Clientes"],["invoices","Facturas"],["stats","Estadísticas"],["board","Pizarrón"]].map(([v,l])=>(
             <button key={v} style={S.navBtn(view===v)} onClick={()=>{setView(v);if(v!=="clients")setSelectedClientId(null);}}>{l}</button>
           ))}
         </nav>
       </header>
       <main style={{ padding:"28px 28px", maxWidth:1100, margin:"0 auto" }}>
         {view==="dashboard"&&<Dashboard data={data} onGoToClient={goToClient} companyName={currentCompany.name} />}
-        {view==="clients"&&<ClientsView data={data} onSave={()=>loadData()} companyId={currentCompany.id} selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId} />}
+        {view==="clients"&&<ClientsView data={data} onSave={()=>loadData()} companyId={currentCompany.id} companyName={currentCompany.name} selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId} />}
         {view==="invoices"&&<InvoicesView data={data} onSave={()=>loadData()} companyId={currentCompany.id} onGoToClient={goToClient} />}
         {view==="stats"&&<StatsView data={data} onGoToClient={goToClient} />}
+        {view==="board"&&<BoardView companyId={currentCompany.id} />}
       </main>
     </div>
   );
