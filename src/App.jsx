@@ -166,6 +166,11 @@ function AIAssistant({ client, invoices, companyName }) {
       const st = getInvoiceStatus(i); const d = daysDiff(i.due_date);
       return `- ${i.number}: saldo ${fmt(getInvoiceBalance(i))}, vence ${fmtDate(i.due_date)}${st === "overdue" ? ` (vencida hace ${Math.abs(d)} dias)` : ` (en ${d} dias)`}`;
     }).join("\n");
+    const payProfile = client.payment_profile;
+    const payProfileText = payProfile && (payProfile.method || payProfile.notes)
+      ? `Forma de pago habitual del cliente: ${[payProfile.method, payProfile.term, payProfile.notes].filter(Boolean).join(". ")}`
+      : "Sin información de forma de pago registrada.";
+
     const prompt = `Sos un asistente de cobranzas que trabaja PARA la empresa "${companyName}". Vas a contactar a un cliente que le debe dinero a ${companyName}.
 
 Genera un mensaje de cobranza para enviar por ${channel === "whatsapp" ? "WhatsApp" : channel === "email" ? "email" : "llamada telefonica (guion)"}.
@@ -173,9 +178,11 @@ Datos del cliente deudor: Empresa: ${client.name}, Contacto: ${client.contact ||
 Facturas pendientes:
 ${invoiceSummary}
 ${lastNote ? `Ultimo contacto: "${lastNote.text}" (${fmtDate(lastNote.date)})` : "Sin contactos previos"}
+${payProfileText}
 Tono: ${tone === "cordial" ? "Cordial y amable" : tone === "firme" ? "Firme y directo" : "Urgente"}
 - Escribi en espanol rioplatense, tuteo
 - El mensaje lo manda alguien de ${companyName}, firma como ${companyName}
+- Si hay info de forma de pago, usala para personalizar el mensaje (ej: mencioná el cheque si paga con cheques)
 - ${channel === "whatsapp" ? "Max 5 lineas." : channel === "email" ? "Con asunto en primera linea." : "Guion de llamada con apertura, desarrollo y cierre."}
 - No uses asteriscos ni markdown`;
     try {
@@ -371,7 +378,14 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName }) {
   const [distributeAmount, setDistributeAmount] = useState("");
   const [distribution, setDistribution] = useState(null);
   const [historyModal, setHistoryModal] = useState(null);
+  const [payProfileModal, setPayProfileModal] = useState(false);
+  const [payProfileForm, setPayProfileForm] = useState({ method: cl?.payment_profile?.method||"", term: cl?.payment_profile?.term||"", notes: cl?.payment_profile?.notes||"" });
   if (!cl) return <div style={{ color:"#555" }}>Cliente no encontrado.</div>;
+
+  async function savePayProfile() {
+    await supabase.from("clients").update({ payment_profile: payProfileForm }).eq("id", clientId);
+    onSave(); setPayProfileModal(false);
+  }
 
   function computeDistribution(total) {
     const unpaid = clInvoices.filter(i => getInvoiceStatus(i) !== "paid").sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
@@ -474,6 +488,21 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName }) {
                   <div style={{fontSize:13}}>{n.text}</div>
                 </div>
               ))}
+          </div>
+          <div style={S.card}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+              <p style={{...S.sectionTitle, margin:0}}>💳 Forma de pago habitual</p>
+              <button style={{ ...S.btn(), fontSize:11 }} onClick={()=>{setPayProfileForm({ method:cl.payment_profile?.method||"", term:cl.payment_profile?.term||"", notes:cl.payment_profile?.notes||"" });setPayProfileModal(true);}}>✏️ Editar</button>
+            </div>
+            {!cl.payment_profile || (!cl.payment_profile.method && !cl.payment_profile.notes) ? (
+              <div style={{color:"#555",fontSize:13}}>Sin información cargada aún.</div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:6, fontSize:13 }}>
+                {cl.payment_profile.method && <div>💳 <span style={{color:"#888"}}>Medio:</span> <strong>{cl.payment_profile.method}</strong></div>}
+                {cl.payment_profile.term && <div>📅 <span style={{color:"#888"}}>Plazo habitual:</span> <strong>{cl.payment_profile.term}</strong></div>}
+                {cl.payment_profile.notes && <div style={{ marginTop:4, background:"#0f0f13", borderRadius:8, padding:"10px 12px", color:"#ccc", lineHeight:1.6 }}>{cl.payment_profile.notes}</div>}
+              </div>
+            )}
           </div>
           <AIAssistant client={cl} invoices={data.invoices} companyName={companyName} />
         </div>
@@ -672,11 +701,85 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
         <Field label="Fecha de vencimiento" type="date" value={addForm.due_date} onChange={v=>setAddForm(f=>({...f,due_date:v}))} />
       </Modal>}
       {historyModal&&<PaymentHistoryModal inv={data.invoices.find(i=>i.id===historyModal.id)||historyModal} onDeletePayment={deletePayment} onClose={()=>setHistoryModal(null)} />}
+
+      {payProfileModal&&<Modal title="Forma de pago habitual" onClose={()=>setPayProfileModal(false)} onConfirm={savePayProfile}>
+        <Field label="Medio de pago (ej: cheque, transferencia, efectivo)"><input style={S.input} value={payProfileForm.method} onChange={e=>setPayProfileForm(f=>({...f,method:e.target.value}))} placeholder="ej: Cheque / Transferencia bancaria" /></Field>
+        <Field label="Plazo habitual (ej: 30 días, 15 días)"><input style={S.input} value={payProfileForm.term} onChange={e=>setPayProfileForm(f=>({...f,term:e.target.value}))} placeholder="ej: Cheque a 30 días" /></Field>
+        <Field label="Observaciones (comportamiento de pago)"><textarea style={{...S.input,height:90,resize:"vertical"}} value={payProfileForm.notes} onChange={e=>setPayProfileForm(f=>({...f,notes:e.target.value}))} placeholder="ej: Siempre paga los viernes. A veces pide prórroga de 15 días. Buen cliente pero lento." /></Field>
+      </Modal>}
     </div>
   );
 }
 
-// ── COMPANY SELECTOR ──
+// ── STATS VIEW ──
+function StatsView({ data, onGoToClient }) {
+  const TOP = 10;
+  const clientStats = data.clients.map(client => {
+    const invs = data.invoices.filter(i => i.client_id === client.id);
+    const totalVolume = invs.reduce((a, i) => a + i.amount, 0);
+    let totalDaysLate = 0, countDaysLate = 0;
+    invs.forEach(inv => {
+      const payments = inv.payments || [];
+      if (payments.length === 0) return;
+      const lastPayment = payments.reduce((a, p) => p.date > a.date ? p : a, payments[0]);
+      const daysLate = Math.floor((new Date(lastPayment.date) - new Date(inv.due_date)) / 86400000);
+      totalDaysLate += daysLate; countDaysLate++;
+    });
+    const avgDaysLate = countDaysLate > 0 ? Math.round(totalDaysLate / countDaysLate) : null;
+    const pendingDebt = invs.reduce((a, i) => a + getInvoiceBalance(i), 0);
+    return { client, totalVolume, avgDaysLate, pendingDebt, invoiceCount: invs.length };
+  }).filter(s => s.totalVolume > 0);
+
+  const byVolume = [...clientStats].sort((a, b) => b.totalVolume - a.totalVolume).slice(0, TOP);
+  const byPunctuality = [...clientStats].filter(s => s.avgDaysLate !== null).sort((a, b) => a.avgDaysLate - b.avgDaysLate).slice(0, TOP);
+  const medals = ["🥇","🥈","🥉"];
+
+  function PunctBadge({ days }) {
+    if (days <= 0) return <Badge type="paid">Paga antes</Badge>;
+    if (days <= 7) return <Badge type="alert">{days}d tarde</Badge>;
+    return <Badge type="overdue">{days}d tarde</Badge>;
+  }
+
+  return (
+    <div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24 }}>
+        <div style={S.card}>
+          <p style={S.sectionTitle}>💰 Top {TOP} por volumen de compras</p>
+          {byVolume.length === 0 ? <div style={{color:"#555",fontSize:13}}>Sin datos aún.</div> : byVolume.map((s, i) => (
+            <div key={s.client.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${bc}` }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:18, width:28 }}>{medals[i] || `${i+1}.`}</span>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:13, cursor:"pointer", color:accent }} onClick={() => onGoToClient(s.client)}>{s.client.name}</div>
+                  <div style={{ fontSize:11, color:"#555" }}>{s.invoiceCount} factura{s.invoiceCount!==1?"s":""}</div>
+                </div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontWeight:700, fontSize:13 }}>{fmt(s.totalVolume)}</div>
+                {s.pendingDebt > 0 && <div style={{ fontSize:11, color:"#ff3b3b" }}>Debe: {fmt(s.pendingDebt)}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={S.card}>
+          <p style={S.sectionTitle}>⏱️ Top {TOP} mejores pagadores</p>
+          {byPunctuality.length === 0 ? <div style={{color:"#555",fontSize:13}}>Sin pagos registrados aún.</div> : byPunctuality.map((s, i) => (
+            <div key={s.client.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${bc}` }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:18, width:28 }}>{medals[i] || `${i+1}.`}</span>
+                <div style={{ fontWeight:700, fontSize:13, cursor:"pointer", color:accent }} onClick={() => onGoToClient(s.client)}>{s.client.name}</div>
+              </div>
+              <PunctBadge days={s.avgDaysLate} />
+            </div>
+          ))}
+          <div style={{ fontSize:11, color:"#444", marginTop:12 }}>Calculado en base a pagos registrados.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function CompanySelector({ companies, onSelect, onAdd, onDelete }) {
   const [addModal, setAddModal] = useState(false);
   const [newName, setNewName] = useState("");
@@ -782,7 +885,7 @@ export default function App() {
           </button>
         </div>
         <nav style={{display:"flex",gap:4}}>
-          {[["dashboard","Dashboard"],["clients","Clientes"],["invoices","Facturas"]].map(([v,l])=>(
+          {[["dashboard","Dashboard"],["clients","Clientes"],["invoices","Facturas"],["stats","Estadísticas"]].map(([v,l])=>(
             <button key={v} style={S.navBtn(view===v)} onClick={()=>{setView(v);if(v!=="clients")setSelectedClientId(null);}}>{l}</button>
           ))}
         </nav>
@@ -791,6 +894,7 @@ export default function App() {
         {view==="dashboard"&&<Dashboard data={data} onGoToClient={goToClient} companyName={currentCompany.name} />}
         {view==="clients"&&<ClientsView data={data} onSave={()=>loadData()} companyId={currentCompany.id} selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId} />}
         {view==="invoices"&&<InvoicesView data={data} onSave={()=>loadData()} companyId={currentCompany.id} onGoToClient={goToClient} />}
+        {view==="stats"&&<StatsView data={data} onGoToClient={goToClient} />}
       </main>
     </div>
   );
