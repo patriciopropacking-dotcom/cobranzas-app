@@ -5,7 +5,11 @@ const ALERT_DAYS = 7;
 const TODAY = new Date();
 TODAY.setHours(0, 0, 0, 0);
 
-function daysDiff(dateStr) { return Math.floor((new Date(dateStr) - TODAY) / 86400000); }
+function daysDiff(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  return Math.round((target - TODAY) / 86400000);
+}
 function fmt(n) { return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0); }
 function fmtDate(str) { if (!str) return "-"; const [y, m, d] = str.split("-"); return `${d}/${m}/${y}`; }
 function getTotalPaid(inv) { return (inv.payments || []).reduce((a, p) => a + p.amount, 0); }
@@ -979,6 +983,10 @@ function BoardView({ companyId }) {
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState({ author:"", text:"", color:"default" });
   const [adding, setAdding] = useState(false);
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
+  const fileRef = useState(null);
 
   useEffect(() => { loadNotes(); }, [companyId]);
 
@@ -991,78 +999,166 @@ function BoardView({ companyId }) {
 
   async function addNote() {
     if (!newNote.text.trim()) return;
-    await supabase.from("board_notes").insert({ company_id: companyId, author: newNote.author||"Anónimo", text: newNote.text, color: newNote.color });
+    setUploading(true);
+    let file_url = null;
+    let file_name = null;
+    let file_type = null;
+
+    if (file) {
+      const ext = file.name.split(".").pop();
+      const path = `${companyId}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("board-files").upload(path, file);
+      if (!error) {
+        const { data: urlData } = supabase.storage.from("board-files").getPublicUrl(path);
+        file_url = urlData.publicUrl;
+        file_name = file.name;
+        file_type = file.type;
+      }
+    }
+
+    await supabase.from("board_notes").insert({
+      company_id: companyId,
+      author: newNote.author || "Anónimo",
+      text: newNote.text,
+      color: newNote.color,
+      file_url, file_name, file_type,
+    });
     setNewNote({ author:"", text:"", color:"default" });
+    setFile(null);
     setAdding(false);
+    setUploading(false);
     loadNotes();
   }
 
-  async function deleteNote(id) {
+  async function deleteNote(id, fileUrl) {
     if (!window.confirm("¿Eliminar esta nota?")) return;
+    if (fileUrl) {
+      const path = fileUrl.split("/board-files/")[1];
+      if (path) await supabase.storage.from("board-files").remove([path]);
+    }
     await supabase.from("board_notes").delete().eq("id", id);
     loadNotes();
   }
 
   const colorMap = {
-    default: { bg: white,      border: bc,         label: "⬜ Normal" },
-    yellow:  { bg: "#fffbeb",  border: "#fde68a",  label: "🟡 Importante" },
-    red:     { bg: "#fef2f2",  border: "#fecaca",  label: "🔴 Urgente" },
-    green:   { bg: "#f0fdf4",  border: "#bbf7d0",  label: "🟢 Resuelto" },
-    purple:  { bg: "#a78bfa18", border: "#a78bfa44", label: "🟣 Info" },
+    default: { bg: white,     border: bc,        label: "⬜ Normal" },
+    yellow:  { bg: "#fffbeb", border: "#fde68a", label: "🟡 Importante" },
+    red:     { bg: "#fef2f2", border: "#fecaca", label: "🔴 Urgente" },
+    green:   { bg: "#f0fdf4", border: "#bbf7d0", label: "🟢 Resuelto" },
+    purple:  { bg: "#f5f3ff", border: "#ddd6fe", label: "🟣 Info" },
   };
+
+  const borderLeft = { default: muted, yellow: warnColor, red, green: successColor, purple: "#7c3aed" };
 
   return (
     <div>
+      {/* Lightbox */}
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", cursor:"zoom-out" }}>
+          <img src={lightbox} style={{ maxWidth:"90vw", maxHeight:"90vh", borderRadius:8, boxShadow:"0 8px 40px rgba(0,0,0,.5)" }} onClick={e => e.stopPropagation()} />
+        </div>
+      )}
+
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
         <div>
-          <div style={{ fontSize:18, fontWeight:700, letterSpacing:1 }}>📋 Pizarrón del equipo</div>
-          <div style={{ fontSize:12, color:muted, marginTop:4 }}>Notas, tareas y avisos para todos</div>
+          <div style={{ fontSize:18, fontWeight:700 }}>📋 Pizarrón del equipo</div>
+          <div style={{ fontSize:12, color:muted, marginTop:4 }}>Notas, tareas y archivos para todos</div>
         </div>
         <button style={S.btn("primary")} onClick={() => setAdding(true)}>+ Nueva nota</button>
       </div>
 
       {adding && (
-        <div style={{ ...S.card, borderColor:`${bc}`, marginBottom:24 }}>
+        <div style={{ ...S.card, marginBottom:24 }}>
           <p style={{ ...S.sectionTitle, color:red }}>Nueva nota</p>
-          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <div><label style={S.label}>Tu nombre</label><input style={S.input} value={newNote.author} onChange={e=>setNewNote(n=>({...n,author:e.target.value}))} placeholder="ej: Patricio" /></div>
-            <div><label style={S.label}>Nota</label><textarea style={{...S.input,height:100,resize:"vertical"}} value={newNote.text} onChange={e=>setNewNote(n=>({...n,text:e.target.value}))} placeholder="Escribí tu nota, tarea o aviso acá..." /></div>
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <div><label style={S.label}>Tu nombre</label>
+              <input style={S.input} value={newNote.author} onChange={e=>setNewNote(n=>({...n,author:e.target.value}))} placeholder="ej: Patricio" />
+            </div>
+            <div><label style={S.label}>Nota</label>
+              <textarea style={{...S.input, height:100, resize:"vertical"}} value={newNote.text} onChange={e=>setNewNote(n=>({...n,text:e.target.value}))} placeholder="Escribí tu nota, tarea o aviso acá..." />
+            </div>
+
+            {/* File upload */}
+            <div>
+              <label style={S.label}>Adjuntar archivo (imagen o PDF)</label>
+              <label style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", background:bg, border:`2px dashed ${bc}`, borderRadius:8, cursor:"pointer" }}>
+                <span style={{ fontSize:20 }}>📎</span>
+                <span style={{ fontSize:13, color: file ? navy : muted }}>
+                  {file ? file.name : "Hacé clic para elegir una imagen o PDF"}
+                </span>
+                <input type="file" accept="image/*,.pdf" style={{ display:"none" }}
+                  onChange={e => setFile(e.target.files[0] || null)} />
+              </label>
+              {file && (
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+                  {file.type.startsWith("image/") && (
+                    <img src={URL.createObjectURL(file)} style={{ width:60, height:60, objectFit:"cover", borderRadius:6, border:`1px solid ${bc}` }} />
+                  )}
+                  {file.type === "application/pdf" && <span style={{ fontSize:24 }}>📄</span>}
+                  <span style={{ fontSize:12, color:sub }}>{file.name}</span>
+                  <button style={{ ...S.btn("danger"), padding:"3px 8px", fontSize:11 }} onClick={() => setFile(null)}>×</button>
+                </div>
+              )}
+            </div>
+
             <div><label style={S.label}>Tipo</label>
               <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                 {Object.entries(colorMap).map(([k,v]) => (
-                  <button key={k} style={{ ...S.btn(newNote.color===k?"primary":"default"), fontSize:11 }} onClick={()=>setNewNote(n=>({...n,color:k}))}>{v.label}</button>
+                  <button key={k} style={{ ...S.btn(newNote.color===k ? "primary" : "default"), fontSize:11 }} onClick={()=>setNewNote(n=>({...n,color:k}))}>{v.label}</button>
                 ))}
               </div>
             </div>
             <div style={{ display:"flex", gap:8 }}>
-              <button style={S.btn()} onClick={()=>setAdding(false)}>Cancelar</button>
-              <button style={S.btn("primary")} onClick={addNote}>Publicar nota</button>
+              <button style={S.btn()} onClick={() => { setAdding(false); setFile(null); }}>Cancelar</button>
+              <button style={S.btn("primary")} onClick={addNote} disabled={uploading}>
+                {uploading ? "Publicando..." : "Publicar nota"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {loading ? <div style={{color:muted,fontSize:13}}>Cargando...</div> :
-       notes.length === 0 ? <div style={{color:muted,fontSize:13,textAlign:"center",padding:"40px 0"}}>Sin notas aún. ¡Agregá la primera!</div> :
-       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:16 }}>
-        {notes.map(note => {
-          const c = colorMap[note.color] || colorMap.default;
-          const date = new Date(note.created_at);
-          const dateStr = `${date.getDate().toString().padStart(2,"0")}/${(date.getMonth()+1).toString().padStart(2,"0")}/${date.getFullYear()} ${date.getHours().toString().padStart(2,"0")}:${date.getMinutes().toString().padStart(2,"0")}`;
-          return (
-            <div key={note.id} style={{ background:c.bg, border:`1px solid ${c.border}`, borderRadius:12, padding:20, position:"relative", boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:13, color:red }}>{note.author}</div>
-                  <div style={{ fontSize:11, color:muted }}>{dateStr}</div>
-                </div>
-                <button style={{ ...S.btn("danger"), padding:"4px 8px", fontSize:11 }} onClick={()=>deleteNote(note.id)}>×</button>
-              </div>
-              <div style={{ fontSize:13, lineHeight:1.7, whiteSpace:"pre-wrap", color:sub }}>{note.text}</div>
+      {loading
+        ? <div style={{color:muted, fontSize:13}}>Cargando...</div>
+        : notes.length === 0
+          ? <div style={{color:muted, fontSize:13, textAlign:"center", padding:"40px 0"}}>Sin notas aún. ¡Agregá la primera!</div>
+          : <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:16 }}>
+              {notes.map(note => {
+                const c = colorMap[note.color] || colorMap.default;
+                const bl = borderLeft[note.color] || muted;
+                const date = new Date(note.created_at);
+                const dateStr = `${date.getDate().toString().padStart(2,"0")}/${(date.getMonth()+1).toString().padStart(2,"0")}/${date.getFullYear()} ${date.getHours().toString().padStart(2,"0")}:${date.getMinutes().toString().padStart(2,"0")}`;
+                const isImage = note.file_type?.startsWith("image/");
+                const isPdf = note.file_type === "application/pdf";
+                return (
+                  <div key={note.id} style={{ background:c.bg, border:`1px solid ${c.border}`, borderLeft:`4px solid ${bl}`, borderRadius:12, padding:20, boxShadow:"0 1px 4px rgba(0,0,0,.06)" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                      <div>
+                        <div style={{ fontWeight:700, fontSize:13, color:navy }}>{note.author}</div>
+                        <div style={{ fontSize:11, color:muted }}>{dateStr} · {colorMap[note.color]?.label || "⬜ Normal"}</div>
+                      </div>
+                      <button style={{ ...S.btn("danger"), padding:"4px 8px", fontSize:11 }} onClick={() => deleteNote(note.id, note.file_url)}>×</button>
+                    </div>
+                    <div style={{ fontSize:13, lineHeight:1.7, whiteSpace:"pre-wrap", color:sub, marginBottom: note.file_url ? 14 : 0 }}>{note.text}</div>
+
+                    {/* Attachment */}
+                    {isImage && note.file_url && (
+                      <img src={note.file_url} alt={note.file_name}
+                        onClick={() => setLightbox(note.file_url)}
+                        style={{ width:"100%", maxHeight:200, objectFit:"cover", borderRadius:8, cursor:"zoom-in", border:`1px solid ${bc}`, marginTop:4 }} />
+                    )}
+                    {isPdf && note.file_url && (
+                      <a href={note.file_url} target="_blank" rel="noreferrer"
+                        style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", background:white, border:`1px solid ${bc}`, borderRadius:8, textDecoration:"none", color:navy, fontSize:13, fontWeight:600, marginTop:4 }}>
+                        <span style={{ fontSize:20 }}>📄</span>
+                        <span style={{ flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{note.file_name}</span>
+                        <span style={{ color:muted, fontSize:11 }}>↓ Abrir</span>
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-       </div>
       }
     </div>
   );
