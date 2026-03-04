@@ -1119,6 +1119,9 @@ function CompanySelector({ companies, onSelect, onAdd, onDelete }) {
       {addModal && <Modal title="Nueva empresa" onClose={()=>setAddModal(false)} onConfirm={handleAdd}>
         <Field label="Nombre de la empresa" value={newName} onChange={setNewName} />
       </Modal>}
+    </div>
+  );
+}
 
 export default function App() {
   const [companies, setCompanies] = useState([]);
