@@ -107,6 +107,14 @@ const S = {
     fontSize: 13, fontWeight: active ? 600 : 500,
     transition: "all 0.15s", marginBottom: 2,
   }),
+  navBtn: (active, color) => ({
+    background: active ? (color || navy) : "transparent",
+    color: active ? white : sub,
+    border: `1px solid ${active ? (color || navy) : bc}`,
+    borderRadius: 8, padding: "6px 14px", cursor: "pointer",
+    fontSize: 12, fontWeight: 600, fontFamily: font,
+    transition: "all 0.15s",
+  }),
 };
 
 function Badge({ type, children }) {
