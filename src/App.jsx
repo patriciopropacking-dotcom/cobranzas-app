@@ -574,11 +574,18 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
   }
   async function deletePayment(invId, paymentId) {
     const inv = data.invoices.find(i => i.id === invId);
+    const payment = (inv.payments||[]).find(p => p.id === paymentId);
     const updatedPayments = (inv.payments||[]).filter(p => p.id !== paymentId);
     await supabase.from("invoices").update({ payments: updatedPayments }).eq("id", invId);
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser")||"Usuario", action: `Eliminó pago de ${fmt(payment?.amount||0)} en factura ${inv.number} de ${cl.name}`, entity: cl.name });
     onSave(); setHistoryModal(null);
   }
-  async function deleteInvoice(invId) { await supabase.from("invoices").delete().eq("id", invId); onSave(); }
+  async function deleteInvoice(invId) {
+    const inv = data.invoices.find(i => i.id === invId);
+    await supabase.from("invoices").delete().eq("id", invId);
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser")||"Usuario", action: `Eliminó factura ${inv?.number||""} de ${cl.name}`, entity: cl.name });
+    onSave();
+  }
 
   return (
     <div>
@@ -804,8 +811,11 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
 
   async function deletePayment(invId, paymentId) {
     const inv = data.invoices.find(i => i.id === invId);
+    const payment = (inv.payments||[]).find(p => p.id === paymentId);
+    const cl = data.clients.find(c => c.id === inv.client_id);
     const updatedPayments = (inv.payments||[]).filter(p => p.id !== paymentId);
     await supabase.from("invoices").update({ payments: updatedPayments }).eq("id", invId);
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser")||"Usuario", action: `Eliminó pago de ${fmt(payment?.amount||0)} en factura ${inv.number} de ${cl?.name||"cliente"}`, entity: cl?.name });
     onSave(); setHistoryModal(null);
   }
   async function addInvoice() {
@@ -814,7 +824,13 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
     await logActivity({ companyId, userName: localStorage.getItem("cobUser") || "Usuario", action: `Cargó factura ${addForm.number||"nueva"} a ${cl?.name || "cliente"}`, entity: cl?.name, amount: parseFloat(addForm.amount)||0 });
     onSave(); setAddModal(false); setAddForm({clientId:"",number:"",amount:"",due_date:""});
   }
-  async function deleteInvoice(invId) { await supabase.from("invoices").delete().eq("id", invId); onSave(); }
+  async function deleteInvoice(invId) {
+    const inv = data.invoices.find(i => i.id === invId);
+    const cl = data.clients.find(c => c.id === inv?.client_id);
+    await supabase.from("invoices").delete().eq("id", invId);
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser")||"Usuario", action: `Eliminó factura ${inv?.number||""} de ${cl?.name||"cliente"}`, entity: cl?.name });
+    onSave();
+  }
   const getClient = id => data.clients.find(c=>c.id===id);
   const filtered = [...data.invoices].filter(i=>{
     const st = getInvoiceStatus(i);
@@ -1199,6 +1215,11 @@ function ActivityView({ companyId }) {
 
   useEffect(() => { loadLogs(); }, [companyId, filter]);
 
+  async function deleteLog(id) {
+    await supabase.from("activity_log").delete().eq("id", id);
+    setLogs(prev => prev.filter(l => l.id !== id));
+  }
+
   async function loadLogs() {
     setLoading(true);
     let query = supabase.from("activity_log").select("*").eq("company_id", companyId).order("created_at", { ascending: false });
@@ -1285,6 +1306,10 @@ function ActivityView({ companyId }) {
                         {log.amount > 0 && (
                           <div style={{ fontSize:15, fontWeight:700, color:successColor, flexShrink:0 }}>{fmt(log.amount)}</div>
                         )}
+                        <button onClick={() => deleteLog(log.id)} title="Eliminar registro"
+                          style={{ background:"none", border:"none", cursor:"pointer", color:"rgba(0,0,0,.2)", fontSize:18, lineHeight:1, padding:"0 4px", flexShrink:0 }}
+                          onMouseEnter={e => e.target.style.color=red}
+                          onMouseLeave={e => e.target.style.color="rgba(0,0,0,.2)"}>×</button>
                       </div>
                     );
                   })}
