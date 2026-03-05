@@ -496,11 +496,8 @@ ${alertClients ? `\nVencen pronto:\n${alertClients}` : ""}`;
 
 function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }) {
   const cl = data.clients.find(c => c.id === clientId);
-  const clInvoices = data.invoices.filter(i => i.client_id === clientId);
-  const totalDebt = clInvoices.reduce((a,i)=>a+getInvoiceBalance(i),0);
-  const dd = cl?.next_contact ? daysDiff(cl.next_contact) : null;
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name:cl?.name||"", contact:cl?.contact||"", phone:cl?.phone||"", email:cl?.email||"", next_contact:cl?.next_contact||"" });
+  const [editForm, setEditForm] = useState({ name:"", contact:"", phone:"", email:"", next_contact:"" });
   const [noteModal, setNoteModal] = useState(false);
   const [noteForm, setNoteForm] = useState({ note:"", next_contact:"" });
   const [invModal, setInvModal] = useState(false);
@@ -512,8 +509,11 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
   const [distribution, setDistribution] = useState(null);
   const [historyModal, setHistoryModal] = useState(null);
   const [payProfileModal, setPayProfileModal] = useState(false);
-  const [payProfileForm, setPayProfileForm] = useState({ method: cl?.payment_profile?.method||"", term: cl?.payment_profile?.term||"", notes: cl?.payment_profile?.notes||"" });
+  const [payProfileForm, setPayProfileForm] = useState({ method:"", term:"", notes:"" });
   if (!cl) return <div style={{ color:muted }}>Cliente no encontrado.</div>;
+  const clInvoices = data.invoices.filter(i => i.client_id === clientId);
+  const totalDebt = clInvoices.reduce((a,i)=>a+getInvoiceBalance(i),0);
+  const dd = cl?.next_contact ? daysDiff(cl.next_contact) : null;
 
   async function savePayProfile() {
     await supabase.from("clients").update({ payment_profile: payProfileForm }).eq("id", clientId);
@@ -999,7 +999,7 @@ function BoardView({ companyId }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState(null);
-  const fileRef = useState(null);
+  const fileRef = { current: null };
 
   useEffect(() => { loadNotes(); }, [companyId]);
 
