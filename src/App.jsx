@@ -11,6 +11,10 @@ function daysDiff(dateStr) {
   return Math.round((target - TODAY) / 86400000);
 }
 function fmt(n) { return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0); }
+
+async function logActivity({ companyId, userName, action, entity = null, amount = null }) {
+  try { await supabase.from("activity_log").insert({ company_id: companyId, user_name: userName || "Sistema", action, entity, amount }); } catch {}
+}
 function fmtDate(str) { if (!str) return "-"; const [y, m, d] = str.split("-"); return `${d}/${m}/${y}`; }
 function getTotalPaid(inv) { return (inv.payments || []).reduce((a, p) => a + p.amount, 0); }
 function getInvoiceBalance(inv) { return Math.max(0, inv.amount - getTotalPaid(inv)); }
@@ -530,10 +534,12 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
     const updates = { notes: newNotes };
     if (noteForm.next_contact) updates.next_contact = noteForm.next_contact;
     await supabase.from("clients").update(updates).eq("id", clientId);
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser") || "Usuario", action: `Registró contacto con ${cl.name}`, entity: cl.name });
     onSave(); setNoteModal(false); setNoteForm({ note:"", next_contact:"" });
   }
   async function addInvoice() {
     await supabase.from("invoices").insert({ company_id: companyId, client_id: clientId, number: invForm.number||"FC-????", amount: parseFloat(invForm.amount)||0, payments: [], due_date: invForm.due_date||"" });
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser") || "Usuario", action: `Cargó factura ${invForm.number||"nueva"} a ${cl.name}`, entity: cl.name, amount: parseFloat(invForm.amount)||0 });
     onSave(); setInvModal(false); setInvForm({ number:"", amount:"", due_date:"" });
   }
   async function applyPayment() {
@@ -544,6 +550,7 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
     const newPayment = { id:"p"+Date.now(), date: new Date().toISOString().split("T")[0], amount: applied, note: payForm.note };
     const updatedPayments = [...(payModal.payments || []), newPayment];
     await supabase.from("invoices").update({ payments: updatedPayments }).eq("id", payModal.id);
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser") || "Usuario", action: `Registró pago de ${cl.name} — factura ${payModal.number}`, entity: cl.name, amount: applied });
     onSave(); setPayModal(null); setPayForm({ amount:"", note:"" });
   }
   async function markPaid(invId) {
@@ -552,6 +559,7 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
     if (balance <= 0) return;
     const newPayment = { id:"p"+Date.now(), date: new Date().toISOString().split("T")[0], amount: balance, note: "Pago total" };
     await supabase.from("invoices").update({ payments: [...(inv.payments||[]), newPayment] }).eq("id", invId);
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser") || "Usuario", action: `Marcó como cobrada factura ${inv.number} de ${cl.name}`, entity: cl.name, amount: balance });
     onSave();
   }
   async function applyDistribution() {
@@ -561,6 +569,7 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
       const newPayment = { id:"p"+Date.now()+Math.random(), date: new Date().toISOString().split("T")[0], amount: applied, note: `Distribución ${fmt(parseFloat(distributeAmount))}` };
       await supabase.from("invoices").update({ payments: [...(inv.payments||[]), newPayment] }).eq("id", inv.id);
     }
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser") || "Usuario", action: `Distribuyó pago de ${fmt(parseFloat(distributeAmount))} entre facturas de ${cl.name}`, entity: cl.name, amount: parseFloat(distributeAmount) });
     onSave(); setDistributeModal(false); setDistributeAmount(""); setDistribution(null);
   }
   async function deletePayment(invId, paymentId) {
@@ -783,6 +792,8 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
     const valid = quickRows.filter(r => r.number && r.amount && r.due_date && r.clientId);
     for (const r of valid) {
       await supabase.from("invoices").insert({ company_id: companyId, client_id: r.clientId, number: r.number, amount: parseFloat(r.amount)||0, payments:[], due_date: r.due_date });
+      const cl = data.clients.find(c => c.id === r.clientId);
+      await logActivity({ companyId, userName: localStorage.getItem("cobUser") || "Usuario", action: `Cargó factura ${r.number} a ${cl?.name || "cliente"}`, entity: cl?.name, amount: parseFloat(r.amount)||0 });
       setQuickDone(d => d+1);
     }
     setQuickSaving(false);
@@ -798,7 +809,9 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
     onSave(); setHistoryModal(null);
   }
   async function addInvoice() {
+    const cl = data.clients.find(c => c.id === (addForm.clientId||data.clients[0]?.id));
     await supabase.from("invoices").insert({ company_id: companyId, client_id:addForm.clientId||data.clients[0]?.id, number:addForm.number||"FC-????", amount:parseFloat(addForm.amount)||0, payments:[], due_date:addForm.due_date||"" });
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser") || "Usuario", action: `Cargó factura ${addForm.number||"nueva"} a ${cl?.name || "cliente"}`, entity: cl?.name, amount: parseFloat(addForm.amount)||0 });
     onSave(); setAddModal(false); setAddForm({clientId:"",number:"",amount:"",due_date:""});
   }
   async function deleteInvoice(invId) { await supabase.from("invoices").delete().eq("id", invId); onSave(); }
@@ -1164,6 +1177,125 @@ function BoardView({ companyId }) {
   );
 }
 
+
+function NameForm({ onSave }) {
+  const [name, setName] = useState("");
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+      <input style={{ ...S.input, fontSize:15, padding:"12px 16px" }} placeholder="ej: Patricio" value={name}
+        onChange={e => setName(e.target.value)}
+        onKeyDown={e => e.key === "Enter" && name.trim() && onSave(name.trim())} autoFocus />
+      <button style={{ ...S.btn("primary"), padding:"12px", fontSize:14, borderRadius:10 }}
+        onClick={() => name.trim() && onSave(name.trim())}>Entrar →</button>
+    </div>
+  );
+}
+
+// ── ACTIVITY VIEW ──
+function ActivityView({ companyId }) {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("today");
+
+  useEffect(() => { loadLogs(); }, [companyId, filter]);
+
+  async function loadLogs() {
+    setLoading(true);
+    let query = supabase.from("activity_log").select("*").eq("company_id", companyId).order("created_at", { ascending: false });
+    if (filter === "today") {
+      const start = new Date(); start.setHours(0,0,0,0);
+      query = query.gte("created_at", start.toISOString());
+    } else if (filter === "week") {
+      const start = new Date(); start.setDate(start.getDate() - 7); start.setHours(0,0,0,0);
+      query = query.gte("created_at", start.toISOString());
+    }
+    const { data } = await query.limit(200);
+    setLogs(data || []);
+    setLoading(false);
+  }
+
+  function getIcon(action) {
+    if (action.includes("pago") || action.includes("cobr") || action.includes("Distribuy")) return { icon:"💰", color:"#16a34a", bg:"#f0fdf4", border:"#bbf7d0" };
+    if (action.includes("factura") || action.includes("Cargó")) return { icon:"🧾", color:"#1a2340", bg:"#f0f4ff", border:"#c7d2fe" };
+    if (action.includes("contacto") || action.includes("nota")) return { icon:"📝", color:"#d97706", bg:"#fffbeb", border:"#fde68a" };
+    return { icon:"⚡", color:"#5b21b6", bg:"#f5f3ff", border:"#ddd6fe" };
+  }
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+  }
+
+  // Group by day
+  const grouped = logs.reduce((acc, log) => {
+    const day = new Date(log.created_at).toLocaleDateString("es-AR", { weekday:"long", day:"numeric", month:"long" });
+    if (!acc[day]) acc[day] = [];
+    acc[day].push(log);
+    return acc;
+  }, {});
+
+  const filters = [
+    { key:"today", label:"Hoy" },
+    { key:"week",  label:"Esta semana" },
+    { key:"all",   label:"Todo" },
+  ];
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+        <div>
+          <div style={{ fontSize:18, fontWeight:700 }}>◷ Actividad del equipo</div>
+          <div style={{ fontSize:12, color:muted, marginTop:4 }}>Registro de acciones realizadas</div>
+        </div>
+        <div style={{ display:"flex", gap:6 }}>
+          {filters.map(f => (
+            <button key={f.key} style={S.navBtn(filter===f.key)} onClick={() => setFilter(f.key)}>{f.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {loading
+        ? <div style={{ color:muted, fontSize:13 }}>Cargando...</div>
+        : logs.length === 0
+          ? <div style={{ textAlign:"center", padding:"60px 0", color:muted }}>
+              <div style={{ fontSize:32, marginBottom:12 }}>📭</div>
+              <div style={{ fontSize:14, fontWeight:600 }}>Sin actividad registrada</div>
+              <div style={{ fontSize:13, marginTop:6 }}>Las acciones del equipo aparecerán acá automáticamente</div>
+            </div>
+          : Object.entries(grouped).map(([day, items]) => (
+              <div key={day} style={{ marginBottom:28 }}>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:muted, marginBottom:12, display:"flex", alignItems:"center", gap:10 }}>
+                  <span>{day}</span>
+                  <span style={{ background:bc, borderRadius:99, padding:"2px 8px", fontSize:10 }}>{items.length} acciones</span>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {items.map(log => {
+                    const { icon, color, bg, border } = getIcon(log.action);
+                    return (
+                      <div key={log.id} style={{ background:white, border:`1px solid ${bc}`, borderRadius:10, padding:"14px 18px", display:"flex", alignItems:"center", gap:14 }}>
+                        <div style={{ width:38, height:38, borderRadius:10, background:bg, border:`1px solid ${border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>{icon}</div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:13, fontWeight:600, color:navy }}>{log.action}</div>
+                          <div style={{ fontSize:12, color:muted, marginTop:2 }}>
+                            <span style={{ fontWeight:600, color }}>{log.user_name}</span>
+                            {" · "}
+                            {fmtTime(log.created_at)}
+                          </div>
+                        </div>
+                        {log.amount > 0 && (
+                          <div style={{ fontSize:15, fontWeight:700, color:successColor, flexShrink:0 }}>{fmt(log.amount)}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+      }
+    </div>
+  );
+}
+
 function CompanySelector({ companies, onSelect, onAdd, onDelete }) {
   const [addModal, setAddModal] = useState(false);
   const [newName, setNewName] = useState("");
@@ -1233,6 +1365,9 @@ export default function App() {
   const [data, setData] = useState({ clients:[], invoices:[] });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("dashboard");
+  const [userName, setUserName] = useState(() => localStorage.getItem("cobUser") || "");
+  const [askName, setAskName] = useState(() => !localStorage.getItem("cobUser"));
+  function saveName(name) { localStorage.setItem("cobUser", name); setUserName(name); setAskName(false); }
   const [selectedClientId, setSelectedClientId] = useState(null);
 
   // Load companies on mount
@@ -1289,12 +1424,25 @@ export default function App() {
 
   if (!currentCompany) return <CompanySelector companies={companies} onSelect={selectCompany} onAdd={addCompany} onDelete={deleteCompany} />;
 
+  // Ask name once per browser if not set
+  if (askName) return (
+    <div style={{ minHeight:"100vh", background:bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:font }}>
+      <div style={{ background:white, border:`1px solid ${bc}`, borderRadius:16, padding:40, width:380, boxShadow:"0 8px 32px rgba(0,0,0,.1)" }}>
+        <div style={{ fontSize:24, marginBottom:8 }}>👋</div>
+        <div style={{ fontSize:20, fontWeight:700, color:navy, marginBottom:6 }}>¿Cómo te llamás?</div>
+        <div style={{ fontSize:13, color:muted, marginBottom:24 }}>Tu nombre va a aparecer en el registro de actividad del equipo.</div>
+        <NameForm onSave={saveName} />
+      </div>
+    </div>
+  );
+
   const navItems = [
     { id:"dashboard", label:"Dashboard",    icon:"▦" },
     { id:"clients",   label:"Clientes",     icon:"◈" },
     { id:"invoices",  label:"Facturas",     icon:"◉" },
     { id:"stats",     label:"Estadísticas", icon:"◎" },
     { id:"board",     label:"Pizarrón",     icon:"◫" },
+    { id:"activity",  label:"Actividad",    icon:"◷" },
   ];
 
   const totalCartera = data.invoices.filter(i=>getInvoiceStatus(i)!=="paid").reduce((a,i)=>a+getInvoiceBalance(i),0);
@@ -1371,6 +1519,7 @@ export default function App() {
           {view==="invoices"&&<InvoicesView data={data} onSave={()=>loadData()} companyId={currentCompany.id} onGoToClient={goToClient} />}
           {view==="stats"&&<StatsView data={data} onGoToClient={goToClient} />}
           {view==="board"&&<BoardView companyId={currentCompany.id} />}
+          {view==="activity"&&<ActivityView companyId={currentCompany.id} />}
         </main>
       </div>
     </div>
