@@ -40,7 +40,7 @@ const muted = "#8a95a8";
 const sub   = "#4a5568";
 const successColor = "#16a34a";
 const warnColor    = "#d97706";
-const font  = ''DM Sans','Helvetica Neue',sans-serif';
+const font  = "'DM Sans','Helvetica Neue',sans-serif";
 
 // ── COMPANY THEMES ──
 const THEMES = {
