@@ -377,7 +377,7 @@ ${alertClients ? `\nVencen pronto:\n${alertClients}` : ""}`;
   return (
     <div>
       {/* KPI Cards */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:16, marginBottom:28 }}>
+      <div className="grid4" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:24 }}>
         <Stat bgColor={red}     label="Vencido"        value={fmt(totalOverdue)}            sub={`${overdueInvs.length} factura${overdueInvs.length!==1?"s":""}`} />
         <Stat bgColor="#b45309" label="Por vencer"     value={fmt(totalPending)}            sub={`${pendingInvs.length} factura${pendingInvs.length!==1?"s":""}`} />
         <Stat bgColor="#5b21b6" label="Contactar hoy"  value={toContact.length}             sub={`cliente${toContact.length!==1?"s":""} pendiente${toContact.length!==1?"s":""}`} />
@@ -397,7 +397,7 @@ ${alertClients ? `\nVencen pronto:\n${alertClients}` : ""}`;
 
       {/* Vencen pronto + Contactar hoy */}
       {(alertInvs.length > 0 || toContact.length > 0) && (
-        <div style={{ display:"grid", gridTemplateColumns: alertInvs.length>0 && toContact.length>0 ? "1fr 1fr" : "1fr", gap:20, marginBottom:20 }}>
+        <div className="grid2" style={{ display:"grid", gridTemplateColumns: alertInvs.length>0 && toContact.length>0 ? "1fr 1fr" : "1fr", gap:16, marginBottom:20 }}>
           {alertInvs.length > 0 && (
             <div style={{ background:white, border:`1px solid ${bc}`, borderRadius:12, overflow:"hidden" }}>
               <div style={{ background:"#b45309", padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -1365,6 +1365,7 @@ export default function App() {
   const [data, setData] = useState({ clients:[], invoices:[] });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userName, setUserName] = useState(() => localStorage.getItem("cobUser") || "");
   const [askName, setAskName] = useState(() => !localStorage.getItem("cobUser"));
   function saveName(name) { localStorage.setItem("cobUser", name); setUserName(name); setAskName(false); }
@@ -1445,17 +1446,31 @@ export default function App() {
     { id:"activity",  label:"Actividad",    icon:"◷" },
   ];
 
+  function navigate(id) { setView(id); if(id!=="clients") setSelectedClientId(null); setSidebarOpen(false); }
+
   const totalCartera = data.invoices.filter(i=>getInvoiceStatus(i)!=="paid").reduce((a,i)=>a+getInvoiceBalance(i),0);
   const totalVencidas = data.invoices.filter(i=>getInvoiceStatus(i)==="overdue").length;
 
   return (
     <div style={{ minHeight:"100vh", background:bg, color:navy, fontFamily:font, display:"flex" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+      <style>{`
+        @media(max-width:767px){
+          .sb{ display:none !important; }
+          .ml220{ margin-left:0 !important; }
+          .pad3232{ padding:16px !important; }
+          .toppad{ padding:0 16px !important; }
+          .grid4{ grid-template-columns:1fr 1fr !important; }
+          .grid2{ grid-template-columns:1fr !important; }
+        }
+        @media(min-width:768px){
+          .hbg{ display:none !important; }
+          .mobsb{ display:none !important; }
+        }
+      `}</style>
 
-      {/* SIDEBAR */}
-      <aside style={{ width:220, minHeight:"100vh", background:navy, display:"flex", flexDirection:"column", position:"fixed", top:0, left:0, zIndex:40 }}>
-
-        {/* Logo */}
+      {/* SIDEBAR DESKTOP */}
+      <aside className="sb" style={{ width:220, minHeight:"100vh", background:navy, display:"flex", flexDirection:"column", position:"fixed", top:0, left:0, zIndex:40 }}>
         <div style={{ padding:"28px 24px 24px", borderBottom:"1px solid rgba(255,255,255,.08)", display:"flex", alignItems:"center", gap:14 }}>
           <div style={{ width:44, height:44, borderRadius:"50%", background:white, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
@@ -1469,8 +1484,6 @@ export default function App() {
             <div style={{ fontSize:10, color:"rgba(255,255,255,.35)", marginTop:2, letterSpacing:.5 }}>Cobranzas</div>
           </div>
         </div>
-
-        {/* Company switcher */}
         <div style={{ padding:"14px 24px", borderBottom:"1px solid rgba(255,255,255,.08)" }}>
           <div style={{ fontSize:10, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:6 }}>Empresa activa</div>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -1478,19 +1491,14 @@ export default function App() {
             <button onClick={() => setCurrentCompany(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"rgba(255,255,255,.3)", fontSize:11, fontFamily:font, padding:0 }}>Cambiar ⇄</button>
           </div>
         </div>
-
-        {/* Nav */}
         <nav style={{ padding:"16px 12px", flex:1 }}>
           {navItems.map(item => (
-            <div key={item.id} style={S.navItem(view===item.id)}
-              onClick={() => { setView(item.id); if(item.id!=="clients") setSelectedClientId(null); }}>
+            <div key={item.id} style={S.navItem(view===item.id)} onClick={() => navigate(item.id)}>
               <span style={{ fontSize:15, width:20, textAlign:"center" }}>{item.icon}</span>
               <span>{item.label}</span>
             </div>
           ))}
         </nav>
-
-        {/* Footer KPI */}
         <div style={{ padding:"20px 24px", borderTop:"1px solid rgba(255,255,255,.08)" }}>
           <div style={{ fontSize:10, color:"rgba(255,255,255,.3)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:6 }}>Cartera total</div>
           <div style={{ fontSize:18, fontWeight:700, color:"#ff8080" }}>{fmt(totalCartera)}</div>
@@ -1498,22 +1506,62 @@ export default function App() {
         </div>
       </aside>
 
+      {/* SIDEBAR MOBILE */}
+      {sidebarOpen && (
+        <div className="mobsb" style={{ position:"fixed", inset:0, zIndex:50, display:"flex" }}>
+          <div style={{ width:260, background:navy, display:"flex", flexDirection:"column", minHeight:"100vh", overflowY:"auto" }}>
+            <div style={{ padding:"20px 20px 18px", borderBottom:"1px solid rgba(255,255,255,.08)", display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:36, height:36, borderRadius:"50%", background:white, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
+                  <div style={{ fontSize:6, fontWeight:800, color:navy2 }}>PROPACKING</div>
+                  <div style={{ fontSize:14, fontWeight:900, color:red, lineHeight:1 }}>P</div>
+                </div>
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:white }}>{currentCompany.name}</div>
+                <div style={{ fontSize:10, color:"rgba(255,255,255,.35)" }}>Cobranzas</div>
+              </div>
+              <button onClick={() => setSidebarOpen(false)} style={{ background:"none", border:"none", color:"rgba(255,255,255,.5)", fontSize:26, cursor:"pointer", padding:0, lineHeight:1 }}>×</button>
+            </div>
+            <div style={{ padding:"12px 20px", borderBottom:"1px solid rgba(255,255,255,.08)" }}>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>Empresa activa</div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div style={{ fontSize:12, fontWeight:600, color:white }}>{currentCompany.name}</div>
+                <button onClick={() => setCurrentCompany(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"rgba(255,255,255,.3)", fontSize:11, fontFamily:font, padding:0 }}>Cambiar ⇄</button>
+              </div>
+            </div>
+            <nav style={{ padding:"12px 10px", flex:1 }}>
+              {navItems.map(item => (
+                <div key={item.id} style={S.navItem(view===item.id)} onClick={() => navigate(item.id)}>
+                  <span style={{ fontSize:15, width:20, textAlign:"center" }}>{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </nav>
+            <div style={{ padding:"16px 20px", borderTop:"1px solid rgba(255,255,255,.08)" }}>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,.3)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>Cartera total</div>
+              <div style={{ fontSize:16, fontWeight:700, color:"#ff8080" }}>{fmt(totalCartera)}</div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,.25)", marginTop:3 }}>{totalVencidas} vencidas · {data.clients.length} clientes</div>
+            </div>
+          </div>
+          <div style={{ flex:1, background:"rgba(0,0,0,.5)" }} onClick={() => setSidebarOpen(false)} />
+        </div>
+      )}
+
       {/* MAIN */}
-      <div style={{ marginLeft:220, flex:1, display:"flex", flexDirection:"column", minHeight:"100vh" }}>
+      <div className="ml220" style={{ marginLeft:220, flex:1, display:"flex", flexDirection:"column", minHeight:"100vh" }}>
         {/* Topbar */}
-        <div style={{ background:white, borderBottom:`1px solid ${bc}`, padding:"0 32px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:20 }}>
+        <div className="toppad" style={{ background:white, borderBottom:`1px solid ${bc}`, padding:"0 32px", height:56, display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:20 }}>
+          <button className="hbg" onClick={() => setSidebarOpen(true)}
+            style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:navy, padding:4, lineHeight:1 }}>☰</button>
           <div>
-            <div style={{ fontSize:17, fontWeight:700, color:navy }}>
-              {navItems.find(n=>n.id===view)?.label || "Dashboard"}
-            </div>
-            <div style={{ fontSize:12, color:muted, marginTop:1 }}>
-              {new Date().toLocaleDateString("es-AR",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}
-            </div>
+            <div style={{ fontSize:16, fontWeight:700, color:navy }}>{navItems.find(n=>n.id===view)?.label||"Dashboard"}</div>
+            <div style={{ fontSize:11, color:muted, marginTop:1 }}>{new Date().toLocaleDateString("es-AR",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
           </div>
         </div>
 
         {/* Content */}
-        <main style={{ padding:"28px 32px", flex:1 }}>
+        <main className="pad3232" style={{ padding:"28px 32px", flex:1 }}>
           {view==="dashboard"&&<Dashboard data={data} onGoToClient={goToClient} companyName={currentCompany.name} />}
           {view==="clients"&&<ClientsView data={data} onSave={()=>loadData()} companyId={currentCompany.id} companyName={currentCompany.name} selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId} />}
           {view==="invoices"&&<InvoicesView data={data} onSave={()=>loadData()} companyId={currentCompany.id} onGoToClient={goToClient} />}
