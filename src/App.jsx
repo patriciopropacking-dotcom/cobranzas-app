@@ -587,6 +587,19 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
     onSave();
   }
 
+  async function deleteNote(idx) {
+    if (!window.confirm("¿Eliminar este contacto?")) return;
+    const newNotes = (cl.notes||[]).filter((_,i) => i !== idx);
+    await supabase.from("clients").update({ notes: newNotes }).eq("id", clientId);
+    onSave();
+  }
+  async function saveEditNote() {
+    if (!editNoteText.trim()) return;
+    const newNotes = (cl.notes||[]).map((n,i) => i === editNoteIdx ? { ...n, text: editNoteText } : n);
+    await supabase.from("clients").update({ notes: newNotes }).eq("id", clientId);
+    setEditNoteIdx(null); setEditNoteText(""); onSave();
+  }
+
   return (
     <div>
       <button style={{ ...S.btn(), marginBottom:20 }} onClick={onBack}>← Volver</button>
@@ -626,11 +639,34 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
           </div>
           <div style={S.card}>
             <p style={S.sectionTitle}>Historial de contactos</p>
-            {(!cl.notes||cl.notes.length===0) ? <div style={{color:muted,fontSize:13}}>Sin notas aún.</div>
+            {(!cl.notes||cl.notes.length===0)
+              ? <div style={{color:muted,fontSize:13}}>Sin notas aún.</div>
               : cl.notes.map((n,i)=>(
-                <div key={i} style={{ borderLeft:"2px solid #e4e8ef", paddingLeft:12, marginBottom:12 }}>
-                  <div style={{fontSize:11,color:muted,marginBottom:2}}>{fmtDate(n.date)}</div>
-                  <div style={{fontSize:13}}>{n.text}</div>
+                <div key={i} style={{ borderLeft:`2px solid ${bc}`, paddingLeft:12, marginBottom:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{fontSize:11,color:muted,marginBottom:2}}>{fmtDate(n.date)}</div>
+                      {editNoteIdx === i
+                        ? <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                            <textarea style={{...S.input, height:70, resize:"vertical", fontSize:13}}
+                              value={editNoteText} onChange={e=>setEditNoteText(e.target.value)} />
+                            <div style={{ display:"flex", gap:6 }}>
+                              <button style={{...S.btn("primary"), fontSize:11, padding:"5px 12px"}} onClick={saveEditNote}>Guardar</button>
+                              <button style={{...S.btn(), fontSize:11, padding:"5px 12px"}} onClick={()=>setEditNoteIdx(null)}>Cancelar</button>
+                            </div>
+                          </div>
+                        : <div style={{fontSize:13, color:sub}}>{n.text}</div>
+                      }
+                    </div>
+                    {editNoteIdx !== i && (
+                      <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                        <button title="Editar" onClick={()=>{setEditNoteIdx(i);setEditNoteText(n.text);}}
+                          style={{ background:"none", border:`1px solid ${bc}`, borderRadius:6, cursor:"pointer", fontSize:12, padding:"3px 7px", color:muted }}>✏️</button>
+                        <button title="Eliminar" onClick={()=>deleteNote(i)}
+                          style={{ background:"none", border:`1px solid ${bc}`, borderRadius:6, cursor:"pointer", fontSize:12, padding:"3px 7px", color:muted }}>×</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
           </div>
