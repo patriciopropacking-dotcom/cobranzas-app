@@ -40,7 +40,60 @@ const muted = "#8a95a8";
 const sub   = "#4a5568";
 const successColor = "#16a34a";
 const warnColor    = "#d97706";
-const font  = "'DM Sans','Helvetica Neue',sans-serif";
+const font  = ''DM Sans','Helvetica Neue',sans-serif';
+
+// ── COMPANY THEMES ──
+const THEMES = {
+  default: {
+    sidebar: "#1a2340",
+    accent:  "#d0282e",
+    accent2: "#243060",
+    logoText: "P",
+    logoSub:  "PROPACKING",
+    logoSubSmall: "INSUMOS EMBALAJE",
+    label:   "PROPACKING",
+    font,
+  },
+  propelsa: {
+    sidebar: "#2a6e35",
+    accent:  "#4caf65",
+    accent2: "#1e5228",
+    logoText: "P",
+    logoSub:  "PROPELSA",
+    logoSubSmall: "",
+    label:   "PROPELSA",
+    font: "'DM Sans','Helvetica Neue',sans-serif",
+  },
+  wassington: {
+    sidebar: "#c41208",
+    accent:  "#ff4433",
+    accent2: "#8c0d06",
+    logoText: "W",
+    logoSub:  "WASSINGTON",
+    logoSubSmall: "★",
+    label:   "WASSINGTON",
+    font: "'DM Sans','Helvetica Neue',sans-serif",
+  },
+  cepindus: {
+    sidebar: "#1a1a2e",
+    accent:  "#cc2200",
+    accent2: "#2d2d44",
+    logoText: "C",
+    logoSub:  "CEPINDUS",
+    logoSubSmall: "",
+    label:   "CEPINDUS",
+    font: "'DM Sans','Helvetica Neue',sans-serif",
+  },
+};
+
+function getTheme(companyName) {
+  if (!companyName) return THEMES.default;
+  const n = companyName.toLowerCase();
+  if (n.includes("propelsa"))   return THEMES.propelsa;
+  if (n.includes("wassington")) return THEMES.wassington;
+  if (n.includes("cepindus"))   return THEMES.cepindus;
+  return THEMES.default;
+}
 
 const S = {
   card: {
@@ -107,10 +160,10 @@ const S = {
     fontSize: 13, fontWeight: 600, fontFamily: font,
     transition: "all 0.15s",
   }),
-  navItem: (active) => ({
+  navItem: (active, accent) => ({
     display: "flex", alignItems: "center", gap: 12,
     padding: "10px 14px", borderRadius: 8, cursor: "pointer",
-    background: active ? red : "transparent",
+    background: active ? (accent||red) : "transparent",
     color: active ? white : "rgba(255,255,255,0.5)",
     fontSize: 13, fontWeight: active ? 600 : 500,
     transition: "all 0.15s", marginBottom: 2,
@@ -1414,21 +1467,26 @@ function CompanySelector({ companies, onSelect, onAdd, onDelete }) {
           <div style={{ fontSize:22, fontWeight:700, color:navy, marginBottom:6 }}>Seleccioná una empresa</div>
           <div style={{ fontSize:13, color:muted, marginBottom:32 }}>Elegí con qué empresa vas a trabajar hoy</div>
           <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:16 }}>
-            {companies.map(co => (
+            {companies.map(co => {
+              const t = getTheme(co.name);
+              return (
               <div key={co.id} style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <button onClick={() => onSelect(co)}
-                  style={{ flex:1, background:white, border:`1px solid ${bc}`, borderRadius:12, padding:"16px 20px", cursor:"pointer", textAlign:"left", fontFamily:font, display:"flex", alignItems:"center", justifyContent:"space-between", transition:"all .15s" }}
-                  onMouseOver={e => { e.currentTarget.style.borderColor = navy; e.currentTarget.style.boxShadow = "0 4px 16px rgba(26,35,64,.1)"; }}
+                  style={{ flex:1, background:white, border:`2px solid ${bc}`, borderRadius:12, padding:"14px 18px", cursor:"pointer", textAlign:"left", fontFamily:font, display:"flex", alignItems:"center", gap:14, transition:"all .15s" }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = t.sidebar; e.currentTarget.style.boxShadow = `0 4px 16px ${t.sidebar}25`; }}
                   onMouseOut={e => { e.currentTarget.style.borderColor = bc; e.currentTarget.style.boxShadow = "none"; }}>
-                  <div>
-                    <div style={{ fontSize:14, fontWeight:600, color:navy }}>{co.name}</div>
-                    <div style={{ fontSize:11, color:muted, marginTop:2, letterSpacing:.5 }}>Empresa</div>
+                  <div style={{ width:40, height:40, borderRadius:"50%", background:t.sidebar, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    <span style={{ fontSize:18, fontWeight:900, color:white }}>{t.logoText}</span>
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:navy }}>{co.name}</div>
+                    <div style={{ fontSize:11, color:muted, marginTop:2 }}>Sistema de cobranzas</div>
                   </div>
                   <span style={{ color:muted, fontSize:16 }}>→</span>
                 </button>
                 <button style={{ ...S.btn("danger"), padding:"10px 12px" }} onClick={() => { if (window.confirm(`¿Eliminar "${co.name}"?`)) onDelete(co.id); }}>×</button>
               </div>
-            ))}
+            );})}
           </div>
           <button style={{ ...S.btn("primary"), width:"100%", padding:"14px", fontSize:14, borderRadius:10 }} onClick={() => setAddModal(true)}>+ Nueva empresa</button>
         </div>
@@ -1532,6 +1590,7 @@ export default function App() {
 
   const totalCartera = data.invoices.filter(i=>getInvoiceStatus(i)!=="paid").reduce((a,i)=>a+getInvoiceBalance(i),0);
   const totalVencidas = data.invoices.filter(i=>getInvoiceStatus(i)==="overdue").length;
+  const T = getTheme(currentCompany?.name);
 
   return (
     <div style={{ minHeight:"100vh", background:bg, color:navy, fontFamily:font, display:"flex" }}>
@@ -1552,13 +1611,13 @@ export default function App() {
       `}</style>
 
       {/* SIDEBAR DESKTOP */}
-      <aside className="sb" style={{ width:220, minHeight:"100vh", background:navy, display:"flex", flexDirection:"column", position:"fixed", top:0, left:0, zIndex:40 }}>
+      <aside className="sb" style={{ width:220, minHeight:"100vh", background:T.sidebar, display:"flex", flexDirection:"column", position:"fixed", top:0, left:0, zIndex:40 }}>
         <div style={{ padding:"28px 24px 24px", borderBottom:"1px solid rgba(255,255,255,.08)", display:"flex", alignItems:"center", gap:14 }}>
           <div style={{ width:44, height:44, borderRadius:"50%", background:white, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
-              <div style={{ fontSize:7, fontWeight:800, color:navy2, letterSpacing:1 }}>PROPACKING</div>
-              <div style={{ fontSize:18, fontWeight:900, color:red, lineHeight:1 }}>P</div>
-              <div style={{ fontSize:5, fontWeight:700, color:navy2, letterSpacing:.5 }}>INSUMOS EMBALAJE</div>
+              <div style={{ fontSize:6, fontWeight:800, color:T.accent2, letterSpacing:.5 }}>{T.logoSub}</div>
+              <div style={{ fontSize:18, fontWeight:900, color:T.accent, lineHeight:1 }}>{T.logoText}</div>
+              {T.logoSubSmall && <div style={{ fontSize:5, fontWeight:700, color:T.accent2, letterSpacing:.5 }}>{T.logoSubSmall}</div>}
             </div>
           </div>
           <div>
@@ -1575,7 +1634,7 @@ export default function App() {
         </div>
         <nav style={{ padding:"16px 12px", flex:1 }}>
           {navItems.map(item => (
-            <div key={item.id} style={S.navItem(view===item.id)} onClick={() => navigate(item.id)}>
+            <div key={item.id} style={S.navItem(view===item.id, T.accent)} onClick={() => navigate(item.id)}>
               <span style={{ fontSize:15, width:20, textAlign:"center" }}>{item.icon}</span>
               <span>{item.label}</span>
             </div>
@@ -1591,12 +1650,12 @@ export default function App() {
       {/* SIDEBAR MOBILE */}
       {sidebarOpen && (
         <div className="mobsb" style={{ position:"fixed", inset:0, zIndex:50, display:"flex" }}>
-          <div style={{ width:260, background:navy, display:"flex", flexDirection:"column", minHeight:"100vh", overflowY:"auto" }}>
+          <div style={{ width:260, background:T.sidebar, display:"flex", flexDirection:"column", minHeight:"100vh", overflowY:"auto" }}>
             <div style={{ padding:"20px 20px 18px", borderBottom:"1px solid rgba(255,255,255,.08)", display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ width:36, height:36, borderRadius:"50%", background:white, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
-                  <div style={{ fontSize:6, fontWeight:800, color:navy2 }}>PROPACKING</div>
-                  <div style={{ fontSize:14, fontWeight:900, color:red, lineHeight:1 }}>P</div>
+                  <div style={{ fontSize:6, fontWeight:800, color:T.accent2 }}>{T.logoSub}</div>
+                  <div style={{ fontSize:14, fontWeight:900, color:T.accent, lineHeight:1 }}>{T.logoText}</div>
                 </div>
               </div>
               <div style={{ flex:1 }}>
@@ -1614,7 +1673,7 @@ export default function App() {
             </div>
             <nav style={{ padding:"12px 10px", flex:1 }}>
               {navItems.map(item => (
-                <div key={item.id} style={S.navItem(view===item.id)} onClick={() => navigate(item.id)}>
+                <div key={item.id} style={S.navItem(view===item.id, T.accent)} onClick={() => navigate(item.id)}>
                   <span style={{ fontSize:15, width:20, textAlign:"center" }}>{item.icon}</span>
                   <span>{item.label}</span>
                 </div>
