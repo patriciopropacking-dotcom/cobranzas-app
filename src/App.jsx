@@ -88,10 +88,11 @@ const THEMES = {
 
 function getTheme(companyName) {
   if (!companyName) return THEMES.default;
-  const n = companyName.toLowerCase();
-  if (n.includes("propelsa"))   return THEMES.propelsa;
+  const n = companyName.toLowerCase().replace(/[^a-z]/g, "");
+  if (n.includes("propelsa") || n.includes("propelsa".replace(/[^a-z]/g,"")))   return THEMES.propelsa;
   if (n.includes("wassington")) return THEMES.wassington;
   if (n.includes("cepindus"))   return THEMES.cepindus;
+  // Also match by first letter for unknown companies named starting with W/C/P
   return THEMES.default;
 }
 
@@ -1590,6 +1591,8 @@ export default function App() {
 
   const totalCartera = data.invoices.filter(i=>getInvoiceStatus(i)!=="paid").reduce((a,i)=>a+getInvoiceBalance(i),0);
   const totalVencidas = data.invoices.filter(i=>getInvoiceStatus(i)==="overdue").length;
+  const T = getTheme(currentCompany?.name);
+
   const T = getTheme(currentCompany?.name);
 
   return (
