@@ -1593,8 +1593,6 @@ export default function App() {
   const totalVencidas = data.invoices.filter(i=>getInvoiceStatus(i)==="overdue").length;
   const T = getTheme(currentCompany?.name);
 
-  const T = getTheme(currentCompany?.name);
-
   return (
     <div style={{ minHeight:"100vh", background:bg, color:navy, fontFamily:font, display:"flex" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
