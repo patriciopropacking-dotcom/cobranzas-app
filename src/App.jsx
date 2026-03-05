@@ -1449,7 +1449,6 @@ export default function App() {
   const totalVencidas = data.invoices.filter(i=>getInvoiceStatus(i)==="overdue").length;
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   function navigate(id) {
     setView(id);
@@ -1457,30 +1456,21 @@ export default function App() {
     setSidebarOpen(false);
   }
 
-  const Logo = () => (
-    <div style={{ width:36, height:36, borderRadius:"50%", background:white, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
-        <div style={{ fontSize:6, fontWeight:800, color:navy2, letterSpacing:.5 }}>PROPACKING</div>
-        <div style={{ fontSize:14, fontWeight:900, color:red, lineHeight:1 }}>P</div>
-      </div>
-    </div>
-  );
-
-  const SidebarContent = () => (
+  const sidebarInner = (showClose) => (
     <>
-      {/* Logo */}
       <div style={{ padding:"20px 20px 18px", borderBottom:"1px solid rgba(255,255,255,.08)", display:"flex", alignItems:"center", gap:12 }}>
-        <Logo />
-        <div>
+        <div style={{ width:36, height:36, borderRadius:"50%", background:white, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:1 }}>
+            <div style={{ fontSize:6, fontWeight:800, color:navy2, letterSpacing:.5 }}>PROPACKING</div>
+            <div style={{ fontSize:14, fontWeight:900, color:red, lineHeight:1 }}>P</div>
+          </div>
+        </div>
+        <div style={{ flex:1 }}>
           <div style={{ fontSize:13, fontWeight:700, color:white }}>{currentCompany.name}</div>
           <div style={{ fontSize:10, color:"rgba(255,255,255,.35)", marginTop:1 }}>Cobranzas</div>
         </div>
-        {isMobile && (
-          <button onClick={() => setSidebarOpen(false)} style={{ marginLeft:"auto", background:"none", border:"none", color:"rgba(255,255,255,.4)", fontSize:22, cursor:"pointer", padding:0, lineHeight:1 }}>×</button>
-        )}
+        {showClose && <button onClick={() => setSidebarOpen(false)} style={{ background:"none", border:"none", color:"rgba(255,255,255,.4)", fontSize:24, cursor:"pointer", padding:0, lineHeight:1 }}>×</button>}
       </div>
-
-      {/* Company switcher */}
       <div style={{ padding:"12px 20px", borderBottom:"1px solid rgba(255,255,255,.08)" }}>
         <div style={{ fontSize:10, color:"rgba(255,255,255,.35)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>Empresa activa</div>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -1488,8 +1478,6 @@ export default function App() {
           <button onClick={() => setCurrentCompany(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"rgba(255,255,255,.3)", fontSize:11, fontFamily:font, padding:0 }}>Cambiar ⇄</button>
         </div>
       </div>
-
-      {/* Nav */}
       <nav style={{ padding:"12px 10px", flex:1 }}>
         {navItems.map(item => (
           <div key={item.id} style={S.navItem(view===item.id)} onClick={() => navigate(item.id)}>
@@ -1498,8 +1486,6 @@ export default function App() {
           </div>
         ))}
       </nav>
-
-      {/* Footer KPI */}
       <div style={{ padding:"16px 20px", borderTop:"1px solid rgba(255,255,255,.08)" }}>
         <div style={{ fontSize:10, color:"rgba(255,255,255,.3)", textTransform:"uppercase", letterSpacing:1.5, marginBottom:4 }}>Cartera total</div>
         <div style={{ fontSize:16, fontWeight:700, color:"#ff8080" }}>{fmt(totalCartera)}</div>
@@ -1529,14 +1515,14 @@ export default function App() {
 
       {/* SIDEBAR DESKTOP */}
       <aside className="sidebar-desktop" style={{ width:220, minHeight:"100vh", background:navy, display:"flex", flexDirection:"column", position:"fixed", top:0, left:0, zIndex:40 }}>
-        <SidebarContent />
+        {sidebarInner(false)}
       </aside>
 
       {/* SIDEBAR MOBILE OVERLAY */}
       {sidebarOpen && (
         <div className="sidebar-mobile-overlay" style={{ position:"fixed", inset:0, zIndex:50, display:"flex" }}>
           <div style={{ width:260, background:navy, display:"flex", flexDirection:"column", minHeight:"100vh" }}>
-            <SidebarContent />
+            {sidebarInner(false)}
           </div>
           <div style={{ flex:1, background:"rgba(0,0,0,.5)" }} onClick={() => setSidebarOpen(false)} />
         </div>
