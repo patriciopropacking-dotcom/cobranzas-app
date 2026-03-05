@@ -195,7 +195,7 @@ function PaymentHistoryModal({ inv, onDeletePayment, onClose }) {
   );
 }
 
-function InvoiceRow({ inv, onMarkPaid, onPartialPay, onDelete, onViewPayments }) {
+function InvoiceRow({ inv, onMarkPaid, onPartialPay, onDelete, onViewPayments, onEdit }) {
   const st = getInvoiceStatus(inv);
   const balance = getInvoiceBalance(inv);
   const totalPaid = getTotalPaid(inv);
@@ -219,6 +219,7 @@ function InvoiceRow({ inv, onMarkPaid, onPartialPay, onDelete, onViewPayments })
           {st === "paid" ? <Badge type="paid">Cobrada</Badge> : totalPaid > 0 ? <Badge type="partial">Parcial</Badge> : st === "overdue" ? <Badge type="overdue">Vencida</Badge> : <Badge type="pending">Pendiente</Badge>}
           {st !== "paid" && <><button style={S.btn()} onClick={() => onPartialPay(inv)}>$ Pago</button><button style={S.btn()} onClick={() => onMarkPaid(inv.id)}>✓</button></>}
           {hasPayments && <button style={{ ...S.btn(), fontSize: 11 }} onClick={() => onViewPayments(inv)}>📋 Recibos</button>}
+          {onEdit && st !== "paid" && <button style={{ ...S.btn(), fontSize: 11 }} onClick={() => onEdit(inv)}>✏️</button>}
           <button style={S.btn("danger")} onClick={() => onDelete(inv.id)}>×</button>
         </div>
       </div>
@@ -512,6 +513,8 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
   const [payProfileForm, setPayProfileForm] = useState({ method:"", term:"", notes:"" });
   const [editNoteIdx, setEditNoteIdx] = useState(null);
   const [editNoteText, setEditNoteText] = useState("");
+  const [editInvModal, setEditInvModal] = useState(null);
+  const [editInvForm, setEditInvForm] = useState({ number:"", amount:"", due_date:"" });
   // Now safe to do conditional logic
   const cl = data.clients.find(c => c.id === clientId);
   if (!cl) return <div style={{ color:muted }}>Cliente no encontrado.</div>;
@@ -589,6 +592,13 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
     await supabase.from("invoices").delete().eq("id", invId);
     await logActivity({ companyId, userName: localStorage.getItem("cobUser")||"Usuario", action: `Eliminó factura ${inv?.number||""} de ${cl.name}`, entity: cl.name });
     onSave();
+  }
+
+  async function saveEditInv() {
+    const amount = parseFloat(editInvForm.amount);
+    await supabase.from("invoices").update({ number: editInvForm.number, amount, due_date: editInvForm.due_date }).eq("id", editInvModal.id);
+    await logActivity({ companyId, userName: localStorage.getItem("cobUser")||"Usuario", action: `Editó factura ${editInvForm.number} de ${cl.name}`, entity: cl.name });
+    setEditInvModal(null); onSave();
   }
 
   async function deleteNote(idx) {
@@ -701,7 +711,8 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
           </div>
           {clInvoices.length===0 ? <div style={{color:muted,fontSize:13}}>Sin facturas.</div>
             : clInvoices.map(inv=>(
-              <InvoiceRow key={inv.id} inv={inv} onMarkPaid={markPaid} onPartialPay={inv=>{setPayModal(inv);setPayForm({amount:"",note:""}); }} onDelete={deleteInvoice} onViewPayments={inv=>setHistoryModal(inv)} />
+              <InvoiceRow key={inv.id} inv={inv} onMarkPaid={markPaid} onPartialPay={inv=>{setPayModal(inv);setPayForm({amount:"",note:""}); }} onDelete={deleteInvoice} onViewPayments={inv=>setHistoryModal(inv)}
+                onEdit={inv=>{ setEditInvModal(inv); setEditInvForm({ number:inv.number, amount:String(inv.amount), due_date:inv.due_date }); }} />
             ))}
         </div>
       </div>
@@ -748,6 +759,12 @@ function ClientDetail({ clientId, data, onBack, onSave, companyName, companyId }
         <Field label="N° Factura" value={invForm.number} onChange={v=>setInvForm(f=>({...f,number:v}))} />
         <Field label="Monto total ($)" type="number" value={invForm.amount} onChange={v=>setInvForm(f=>({...f,amount:v}))} />
         <Field label="Fecha de vencimiento" type="date" value={invForm.due_date} onChange={v=>setInvForm(f=>({...f,due_date:v}))} />
+      </Modal>}
+
+      {editInvModal && <Modal title={`Editar factura — ${editInvModal.number}`} onClose={()=>setEditInvModal(null)} onConfirm={saveEditInv} confirmLabel="Guardar cambios">
+        <Field label="N° Factura" value={editInvForm.number} onChange={v=>setEditInvForm(f=>({...f,number:v}))} />
+        <Field label="Monto total ($)" type="number" value={editInvForm.amount} onChange={v=>setEditInvForm(f=>({...f,amount:v}))} />
+        <Field label="Fecha de vencimiento" type="date" value={editInvForm.due_date} onChange={v=>setEditInvForm(f=>({...f,due_date:v}))} />
       </Modal>}
 
       {payProfileModal&&<Modal title="Forma de pago habitual" onClose={()=>setPayProfileModal(false)} onConfirm={savePayProfile}>
