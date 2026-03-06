@@ -366,6 +366,17 @@ function Dashboard({ data, onGoToClient, companyName }) {
   const [sortAsc, setSortAsc] = useState(true);
   const [aiSummary, setAiSummary] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const todayKey = `contacted_${companyName}_${TODAY.toISOString().split("T")[0]}`;
+  const [contacted, setContacted] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(todayKey) || "[]"); } catch { return []; }
+  });
+  function toggleContacted(clientId) {
+    const next = contacted.includes(clientId)
+      ? contacted.filter(id => id !== clientId)
+      : [...contacted, clientId];
+    setContacted(next);
+    localStorage.setItem(todayKey, JSON.stringify(next));
+  }
   const overdueInvs = data.invoices.filter(i => getInvoiceStatus(i) === "overdue");
   const pendingInvs = data.invoices.filter(i => getInvoiceStatus(i) === "pending");
   const alertInvs = pendingInvs.filter(i => daysDiff(i.due_date) <= ALERT_DAYS);
@@ -486,17 +497,25 @@ ${alertClients ? `\nVencen pronto:\n${alertClients}` : ""}`;
                   <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1.5, color:"rgba(255,255,255,.7)" }}>📞 Contactar hoy</div>
                   <div style={{ fontSize:13, fontWeight:700, color:white, marginTop:4 }}>Clientes pendientes</div>
                 </div>
-                <div style={{ fontSize:28, fontWeight:800, color:white }}>{toContact.length}</div>
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontSize:28, fontWeight:800, color:white }}>{toContact.length - contacted.filter(id => toContact.find(c=>c.id===id)).length}</div>
+                  {contacted.filter(id => toContact.find(c=>c.id===id)).length > 0 && <div style={{ fontSize:11, color:"rgba(255,255,255,.6)" }}>✓ {contacted.filter(id => toContact.find(c=>c.id===id)).length} contactados</div>}
+                </div>
               </div>
               <div style={{ padding:"0 24px" }}>
                 {toContact.map(c => { const n = data.invoices.filter(i => i.client_id===c.id && getInvoiceStatus(i)!=="paid").length; return (
-                  <div key={c.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 0", borderBottom:`1px solid ${bc}` }}>
-                    <div>
-                      <div style={{ fontWeight:600, fontSize:13 }}>{c.name}</div>
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 0", borderBottom:`1px solid ${bc}`, opacity: contacted.includes(c.id) ? 0.5 : 1, transition:"opacity .2s" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontWeight:600, fontSize:13, textDecoration: contacted.includes(c.id) ? "line-through" : "none", color: contacted.includes(c.id) ? muted : navy }}>{c.name}</div>
                       <div style={{ fontSize:12, color:muted, marginTop:2 }}>{c.contact}{c.phone ? ` · ${c.phone}` : ""}</div>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ fontSize:12, color:muted }}>{n} fc.</span>
+                      <button title={contacted.includes(c.id) ? "Desmarcar" : "Marcar como contactado"}
+                        onClick={() => toggleContacted(c.id)}
+                        style={{ width:30, height:30, borderRadius:"50%", border:`2px solid ${contacted.includes(c.id) ? successColor : bc}`, background: contacted.includes(c.id) ? successColor : white, color: contacted.includes(c.id) ? white : muted, fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        ✓
+                      </button>
                       <button style={S.btn("primary")} onClick={() => onGoToClient(c)}>Ver</button>
                     </div>
                   </div>
