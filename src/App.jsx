@@ -962,8 +962,15 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
     onSave();
   }
   const getClient = id => data.clients.find(c=>c.id===id);
+  const [search, setSearch] = useState("");
+
   const filtered = [...data.invoices].filter(i=>{
     const st = getInvoiceStatus(i);
+    const cl = data.clients.find(c=>c.id===i.client_id);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      return i.number?.toLowerCase().includes(q) || cl?.name?.toLowerCase().includes(q);
+    }
     if (filter==="all") return true;
     if (filter==="alert") return st==="pending"&&daysDiff(i.due_date)<=ALERT_DAYS;
     if (filter==="partial") return getTotalPaid(i)>0&&st!=="paid";
@@ -1016,9 +1023,18 @@ function InvoicesView({ data, onSave, companyId, onGoToClient }) {
         </div>
       ) : (
       <div>
+      {/* Buscador */}
+      <div style={{ position:"relative", marginBottom:14 }}>
+        <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", fontSize:15, color:muted }}>🔍</span>
+        <input style={{ ...S.input, paddingLeft:40, fontSize:14 }}
+          placeholder="Buscar por N° factura o cliente..."
+          value={search} onChange={e => { setSearch(e.target.value); if(e.target.value) setFilter("all"); }} />
+        {search && <button onClick={() => setSearch("")}
+          style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:muted, fontSize:18, lineHeight:1 }}>×</button>}
+      </div>
       <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
         {[["all","Todas"],["overdue","Vencidas"],["alert","Vencen pronto"],["pending","Pendientes"],["partial","Pago parcial"],["paid","Cobradas"]].map(([f,l])=>(
-          <button key={f} style={S.navBtn(filter===f)} onClick={()=>setFilter(f)}>{l}</button>
+          <button key={f} style={S.navBtn(filter===f && !search)} onClick={()=>{ setFilter(f); setSearch(""); }}>{l}</button>
         ))}
         <div style={{flex:1}}/>
         <button style={{...S.btn("warning"), marginRight:6}} onClick={()=>setQuickMode(true)}>⚡ Carga rápida</button>
